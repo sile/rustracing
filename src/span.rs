@@ -3,6 +3,8 @@ use std::ops::Deref;
 use std::sync::mpsc;
 use std::time::SystemTime;
 
+use convert::MaybeAsRef;
+
 #[derive(Debug)]
 pub struct SpanBuilder<T> {
     operation_name: Cow<'static, str>,
@@ -85,10 +87,6 @@ impl<T> SpanBuilder<T> {
         };
         Span(Some(inner))
     }
-}
-
-pub trait MaybeAsRef<T> {
-    fn maybe_as_ref(&self) -> Option<&T>;
 }
 
 #[derive(Debug)]
