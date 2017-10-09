@@ -4,12 +4,13 @@ use std::sync::mpsc;
 use std::time::SystemTime;
 
 use convert::MaybeAsRef;
+use tag::Tag;
 
 #[derive(Debug)]
 pub struct SpanBuilder<T> {
     operation_name: Cow<'static, str>,
     start_time: Option<SystemTime>,
-    tags: Vec<SpanTag>,
+    tags: Vec<Tag>,
     references: Vec<SpanReference<T>>,
     baggage_items: Vec<BaggageItem>,
     state: T,
@@ -35,7 +36,7 @@ impl<T> SpanBuilder<T> {
         self.start_time = Some(time);
         self
     }
-    pub fn tag(mut self, tag: SpanTag) -> Self {
+    pub fn tag(mut self, tag: Tag) -> Self {
         self.tags.push(tag);
         self
     }
@@ -69,8 +70,8 @@ impl<T> SpanBuilder<T> {
     }
     pub fn start(mut self) -> Span<T> {
         self.tags.reverse();
-        self.tags.sort_by(|a, b| a.key.cmp(&b.key));
-        self.tags.dedup_by(|a, b| a.key == b.key);
+        self.tags.sort_by(|a, b| a.key().cmp(b.key()));
+        self.tags.dedup_by(|a, b| a.key() == b.key());
 
         self.baggage_items.reverse();
         let context = SpanContext::new(self.state, self.baggage_items);
@@ -111,9 +112,9 @@ impl<T> Span<T> {
             inner.finish_time = Some(time);
         }
     }
-    pub fn set_tag(&mut self, tag: SpanTag) {
+    pub fn set_tag(&mut self, tag: Tag) {
         if let Some(inner) = self.0.as_mut() {
-            inner.tags.retain(|x| x.key != tag.key);
+            inner.tags.retain(|x| x.key() != tag.key());
             inner.tags.push(tag);
         }
     }
@@ -159,7 +160,7 @@ struct SpanInner<T> {
     start_time: SystemTime,
     finish_time: Option<SystemTime>,
     references: Vec<SpanReference<T>>,
-    tags: Vec<SpanTag>,
+    tags: Vec<Tag>,
     logs: Vec<SpanLogRecord>,
     context: SpanContext<T>,
     span_tx: mpsc::Sender<FinishedSpan<T>>,
@@ -171,7 +172,7 @@ pub struct FinishedSpan<T> {
     start_time: SystemTime,
     finish_time: SystemTime,
     references: Vec<SpanReference<T>>,
-    tags: Vec<SpanTag>,
+    tags: Vec<Tag>,
     logs: Vec<SpanLogRecord>,
     context: SpanContext<T>,
 }
@@ -188,7 +189,7 @@ impl<T> FinishedSpan<T> {
     pub fn logs(&self) -> &[SpanLogRecord] {
         &self.logs
     }
-    pub fn tags(&self) -> &[SpanTag] {
+    pub fn tags(&self) -> &[Tag] {
         &self.tags
     }
     pub fn references(&self) -> &[SpanReference<T>] {
@@ -197,20 +198,6 @@ impl<T> FinishedSpan<T> {
     pub fn context(&self) -> &SpanContext<T> {
         &self.context
     }
-}
-
-#[derive(Debug)]
-pub struct SpanTag {
-    pub key: Cow<'static, str>,
-    pub value: SpanTagValue,
-}
-
-#[derive(Debug)]
-pub enum SpanTagValue {
-    String(Cow<'static, str>),
-    Boolean(bool),
-    Integer(i64),
-    Float(f64),
 }
 
 #[derive(Debug)]

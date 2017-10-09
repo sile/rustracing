@@ -12,4 +12,5 @@ pub use span::Span;
 pub mod carrier;
 pub mod convert;
 pub mod span;
+pub mod tag;
 pub mod trace;
