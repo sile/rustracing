@@ -7,5 +7,3 @@
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 
 pub mod span;
-pub mod tag;
-pub mod tracer;
