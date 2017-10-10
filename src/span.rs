@@ -4,43 +4,37 @@ use std::sync::mpsc;
 use std::time::SystemTime;
 
 use convert::MaybeAsRef;
+use log::{Log, LogBuilder};
 use tag::Tag;
 
+pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
+
+// TODO: StartSpanOptions
 #[derive(Debug)]
 pub struct SpanBuilder<T> {
-    operation_name: Cow<'static, str>,
     start_time: Option<SystemTime>,
     tags: Vec<Tag>,
     references: Vec<SpanReference<T>>,
     baggage_items: Vec<BaggageItem>,
-    state: T,
-    span_tx: mpsc::Sender<FinishedSpan<T>>,
 }
 impl<T> SpanBuilder<T> {
-    pub(crate) fn new(
-        operation_name: Cow<'static, str>,
-        state: T,
-        span_tx: mpsc::Sender<FinishedSpan<T>>,
-    ) -> Self {
+    pub(crate) fn new() -> Self {
         SpanBuilder {
-            operation_name,
             start_time: None,
             tags: Vec::new(),
             references: Vec::new(),
             baggage_items: Vec::new(),
-            state,
-            span_tx,
         }
     }
-    pub fn start_time(mut self, time: SystemTime) -> Self {
+    pub fn start_time(&mut self, time: SystemTime) -> &mut Self {
         self.start_time = Some(time);
         self
     }
-    pub fn tag(mut self, tag: Tag) -> Self {
+    pub fn tag(&mut self, tag: Tag) -> &mut Self {
         self.tags.push(tag);
         self
     }
-    pub fn child_of<C>(mut self, context: C) -> Self
+    pub fn child_of<C>(&mut self, context: C) -> &mut Self
     where
         C: MaybeAsRef<SpanContext<T>>,
         T: Clone,
@@ -54,7 +48,7 @@ impl<T> SpanBuilder<T> {
         }
         self
     }
-    pub fn follows_from<C>(mut self, context: C) -> Self
+    pub fn follows_from<C>(&mut self, context: C) -> &mut Self
     where
         C: MaybeAsRef<SpanContext<T>>,
         T: Clone,
@@ -68,25 +62,71 @@ impl<T> SpanBuilder<T> {
         }
         self
     }
-    pub fn start(mut self) -> Span<T> {
+    pub(crate) fn finish<N>(mut self, operation_name: N) -> (InactiveSpan, Vec<SpanReference<T>>)
+    where
+        N: Into<Cow<'static, str>>,
+    {
         self.tags.reverse();
         self.tags.sort_by(|a, b| a.key().cmp(b.key()));
         self.tags.dedup_by(|a, b| a.key() == b.key());
 
         self.baggage_items.reverse();
-        let context = SpanContext::new(self.state, self.baggage_items);
 
+        (
+            InactiveSpan {
+                operation_name: operation_name.into(),
+                start_time: self.start_time.unwrap_or_else(|| SystemTime::now()),
+                tags: self.tags,
+                references: self.references.len(),
+                baggage_items: self.baggage_items,
+            },
+            self.references,
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct InactiveSpan {
+    operation_name: Cow<'static, str>,
+    start_time: SystemTime,
+    tags: Vec<Tag>,
+    references: usize,
+    baggage_items: Vec<BaggageItem>,
+}
+impl InactiveSpan {
+    pub(crate) fn activate<T>(
+        self,
+        state: T,
+        references: Vec<SpanReference<T>>,
+        span_tx: mpsc::Sender<FinishedSpan<T>>,
+    ) -> Span<T> {
+        let context = SpanContext::new(state, self.baggage_items);
         let inner = SpanInner {
             operation_name: self.operation_name,
-            start_time: self.start_time.unwrap_or_else(|| SystemTime::now()),
+            start_time: self.start_time,
             finish_time: None,
             tags: self.tags,
             logs: Vec::new(),
-            references: self.references,
+            references: references,
             context,
-            span_tx: self.span_tx,
+            span_tx,
         };
         Span(Some(inner))
+    }
+    pub fn operation_name(&self) -> &str {
+        self.operation_name.as_ref()
+    }
+    pub fn start_time(&self) -> SystemTime {
+        self.start_time
+    }
+    pub fn tags(&self) -> &[Tag] {
+        &self.tags
+    }
+    pub fn references(&self) -> usize {
+        self.references
+    }
+    pub fn baggage_items(&self) -> &[BaggageItem] {
+        &self.baggage_items
     }
 }
 
@@ -131,9 +171,16 @@ impl<T> Span<T> {
             None
         }
     }
-    pub fn log(&mut self, record: SpanLogRecord) {
+    pub fn log<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut LogBuilder),
+    {
         if let Some(inner) = self.0.as_mut() {
-            inner.logs.push(record);
+            let mut builder = LogBuilder::new();
+            f(&mut builder);
+            if let Some(log) = builder.finish() {
+                inner.logs.push(log);
+            }
         }
     }
 }
@@ -153,6 +200,11 @@ impl<T> Drop for Span<T> {
         }
     }
 }
+impl<T> MaybeAsRef<SpanContext<T>> for Span<T> {
+    fn maybe_as_ref(&self) -> Option<&SpanContext<T>> {
+        self.context()
+    }
+}
 
 #[derive(Debug)]
 struct SpanInner<T> {
@@ -161,7 +213,7 @@ struct SpanInner<T> {
     finish_time: Option<SystemTime>,
     references: Vec<SpanReference<T>>,
     tags: Vec<Tag>,
-    logs: Vec<SpanLogRecord>,
+    logs: Vec<Log>,
     context: SpanContext<T>,
     span_tx: mpsc::Sender<FinishedSpan<T>>,
 }
@@ -173,7 +225,7 @@ pub struct FinishedSpan<T> {
     finish_time: SystemTime,
     references: Vec<SpanReference<T>>,
     tags: Vec<Tag>,
-    logs: Vec<SpanLogRecord>,
+    logs: Vec<Log>,
     context: SpanContext<T>,
 }
 impl<T> FinishedSpan<T> {
@@ -186,7 +238,7 @@ impl<T> FinishedSpan<T> {
     pub fn finish_time(&self) -> SystemTime {
         self.finish_time
     }
-    pub fn logs(&self) -> &[SpanLogRecord] {
+    pub fn logs(&self) -> &[Log] {
         &self.logs
     }
     pub fn tags(&self) -> &[Tag] {
@@ -200,33 +252,13 @@ impl<T> FinishedSpan<T> {
     }
 }
 
-#[derive(Debug)]
-pub struct SpanLogRecord {
-    time: SystemTime,
-    fields: Vec<SpanLogField>,
-}
-impl SpanLogRecord {
-    pub fn time(&self) -> SystemTime {
-        self.time
-    }
-    pub fn fields(&self) -> &[SpanLogField] {
-        &self.fields
-    }
-}
-
-#[derive(Debug)]
-pub struct SpanLogField {
-    pub key: Cow<'static, str>,
-    pub value: Cow<'static, str>,
-}
-
 #[derive(Debug, Clone)]
 pub struct SpanContext<T> {
     state: T,
     baggage_items: Vec<BaggageItem>,
 }
 impl<T> SpanContext<T> {
-    pub fn new(state: T, mut baggage_items: Vec<BaggageItem>) -> Self {
+    pub(crate) fn new(state: T, mut baggage_items: Vec<BaggageItem>) -> Self {
         baggage_items.sort_by(|a, b| a.key.cmp(&b.key));
         baggage_items.dedup_by(|a, b| a.key == b.key);
         SpanContext {
@@ -239,6 +271,11 @@ impl<T> SpanContext<T> {
     }
     pub fn baggage_items(&self) -> &[BaggageItem] {
         &self.baggage_items
+    }
+}
+impl<T> MaybeAsRef<SpanContext<T>> for SpanContext<T> {
+    fn maybe_as_ref(&self) -> Option<&Self> {
+        Some(self)
     }
 }
 

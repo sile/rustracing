@@ -5,12 +5,15 @@
 //! - [The OpenTracing Semantic Specification (v1.1)][specification]
 //!
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
+extern crate backtrace;
 
-pub use trace::{Tracer, SpanReceiver};
+pub use trace::{Tracer, Sampler, NoopTracer, DiscardSampler};
 pub use span::Span;
 
 pub mod carrier;
 pub mod convert;
+pub mod log;
 pub mod span;
 pub mod tag;
-pub mod trace;
+
+mod trace;
