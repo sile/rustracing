@@ -9,89 +9,14 @@ use tag::Tag;
 
 pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
 
-// TODO: StartSpanOptions
-#[derive(Debug)]
-pub struct SpanBuilder<T> {
-    start_time: Option<SystemTime>,
-    tags: Vec<Tag>,
-    references: Vec<SpanReference<T>>,
-    baggage_items: Vec<BaggageItem>,
-}
-impl<T> SpanBuilder<T> {
-    pub(crate) fn new() -> Self {
-        SpanBuilder {
-            start_time: None,
-            tags: Vec::new(),
-            references: Vec::new(),
-            baggage_items: Vec::new(),
-        }
-    }
-    pub fn start_time(&mut self, time: SystemTime) -> &mut Self {
-        self.start_time = Some(time);
-        self
-    }
-    pub fn tag(&mut self, tag: Tag) -> &mut Self {
-        self.tags.push(tag);
-        self
-    }
-    pub fn child_of<C>(&mut self, context: C) -> &mut Self
-    where
-        C: MaybeAsRef<SpanContext<T>>,
-        T: Clone,
-    {
-        if let Some(context) = context.maybe_as_ref() {
-            let reference = SpanReference::ChildOf(context.state().clone());
-            self.references.push(reference);
-            self.baggage_items.extend(
-                context.baggage_items().iter().cloned(),
-            );
-        }
-        self
-    }
-    pub fn follows_from<C>(&mut self, context: C) -> &mut Self
-    where
-        C: MaybeAsRef<SpanContext<T>>,
-        T: Clone,
-    {
-        if let Some(context) = context.maybe_as_ref() {
-            let reference = SpanReference::FollowsFrom(context.state().clone());
-            self.references.push(reference);
-            self.baggage_items.extend(
-                context.baggage_items().iter().cloned(),
-            );
-        }
-        self
-    }
-    pub(crate) fn finish<N>(mut self, operation_name: N) -> (InactiveSpan, Vec<SpanReference<T>>)
-    where
-        N: Into<Cow<'static, str>>,
-    {
-        self.tags.reverse();
-        self.tags.sort_by(|a, b| a.key().cmp(b.key()));
-        self.tags.dedup_by(|a, b| a.key() == b.key());
-
-        self.baggage_items.reverse();
-
-        (
-            InactiveSpan {
-                operation_name: operation_name.into(),
-                start_time: self.start_time.unwrap_or_else(|| SystemTime::now()),
-                tags: self.tags,
-                references: self.references.len(),
-                baggage_items: self.baggage_items,
-            },
-            self.references,
-        )
-    }
-}
-
+// TODO: delete
 #[derive(Debug)]
 pub struct InactiveSpan {
-    operation_name: Cow<'static, str>,
-    start_time: SystemTime,
-    tags: Vec<Tag>,
-    references: usize,
-    baggage_items: Vec<BaggageItem>,
+    pub operation_name: Cow<'static, str>,
+    pub start_time: SystemTime,
+    pub tags: Vec<Tag>,
+    pub references: usize,
+    pub baggage_items: Vec<BaggageItem>,
 }
 impl InactiveSpan {
     pub(crate) fn activate<T>(

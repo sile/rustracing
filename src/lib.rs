@@ -7,7 +7,7 @@
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 extern crate backtrace;
 
-pub use trace::{Tracer, Sampler, NoopTracer, DiscardSampler};
+pub use trace::{Tracer, Sampler, NoopTracer, DiscardSampler, AlwaysSampler, SpanOptions};
 pub use span::Span;
 
 pub mod carrier;
