@@ -215,6 +215,22 @@ pub enum SpanReference<T> {
     ChildOf(T),
     FollowsFrom(T),
 }
+impl<T> SpanReference<T> {
+    pub fn is_child_of(&self) -> bool {
+        if let SpanReference::ChildOf(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+    pub fn is_follows_from(&self) -> bool {
+        if let SpanReference::FollowsFrom(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+}
 impl<T> Deref for SpanReference<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {

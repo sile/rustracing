@@ -60,7 +60,7 @@ where
         self.tags.push(tag);
         self
     }
-    pub fn child_of<C>(mut self, context: C) -> Self
+    pub fn child_of<C>(mut self, context: &C) -> Self
     where
         C: MaybeAsRef<SpanContext<T>>,
         T: Clone,
@@ -74,7 +74,7 @@ where
         }
         self
     }
-    pub fn follows_from<C>(mut self, context: C) -> Self
+    pub fn follows_from<C>(mut self, context: &C) -> Self
     where
         C: MaybeAsRef<SpanContext<T>>,
         T: Clone,
