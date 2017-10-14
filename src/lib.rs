@@ -6,7 +6,10 @@
 //!
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 extern crate backtrace;
+#[macro_use]
+extern crate trackable;
 
+pub use error::{Error, ErrorKind};
 pub use trace::{Tracer, Sampler, NoopTracer, DiscardSampler, AlwaysSampler, SpanOptions};
 pub use span::Span;
 
@@ -16,4 +19,7 @@ pub mod log;
 pub mod span;
 pub mod tag;
 
+mod error;
 mod trace;
+
+pub type Result<T> = std::result::Result<T, Error>;

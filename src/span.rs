@@ -1,8 +1,11 @@
 use std::borrow::Cow;
+use std::io::{Read, Write};
 use std::ops::Deref;
 use std::sync::mpsc;
 use std::time::SystemTime;
 
+use Result;
+use carrier;
 use convert::MaybeAsRef;
 use log::{Log, LogBuilder};
 use tag::Tag;
@@ -196,6 +199,48 @@ impl<T> SpanContext<T> {
     }
     pub fn baggage_items(&self) -> &[BaggageItem] {
         &self.baggage_items
+    }
+    pub fn inject_to_text_map<C>(&self, carrier: &mut C) -> Result<()>
+    where
+        C: carrier::TextMap,
+        T: carrier::InjectToTextMap<C>,
+    {
+        track!(T::inject_to_text_map(self, carrier))
+    }
+    pub fn inject_to_http_header<C>(&self, carrier: &mut C) -> Result<()>
+    where
+        C: carrier::SetHttpHeaderField,
+        T: carrier::InjectToHttpHeader<C>,
+    {
+        track!(T::inject_to_http_header(self, carrier))
+    }
+    pub fn inject_to_binary<C>(&self, carrier: &mut C) -> Result<()>
+    where
+        C: Write,
+        T: carrier::InjectToBinary<C>,
+    {
+        track!(T::inject_to_binary(self, carrier))
+    }
+    pub fn extract_from_text_map<C>(carrier: &C) -> Result<Option<Self>>
+    where
+        C: carrier::TextMap,
+        T: carrier::ExtractFromTextMap<C>,
+    {
+        track!(T::extract_from_text_map(carrier))
+    }
+    pub fn extract_from_http_header<C>(carrier: &C) -> Result<Option<Self>>
+    where
+        C: carrier::GetHttpHeaderField,
+        T: carrier::ExtractFromHttpHeader<C>,
+    {
+        track!(T::extract_from_http_header(carrier))
+    }
+    pub fn extract_from_binary<C>(carrier: &mut C) -> Result<Option<Self>>
+    where
+        C: Read,
+        T: carrier::ExtractFromBinary<C>,
+    {
+        track!(T::extract_from_binary(carrier))
     }
 }
 impl<T> MaybeAsRef<SpanContext<T>> for SpanContext<T> {
