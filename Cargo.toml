@@ -2,6 +2,16 @@
 name = "rustracing"
 version = "0.1.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+description = "OpenTracing API for Rust"
+homepage = "https://github.com/sile/rustracing"
+repository = "https://github.com/sile/rustracing"
+readme = "README.md"
+keywords = ["opentracing"]
+license = "MIT"
+
+[badges]
+travis-ci = {repository = "sile/rustracing"}
+codecov = {repository = "sile/rustracing"}
 
 [dependencies]
 backtrace = "0.3"
