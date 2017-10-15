@@ -49,7 +49,7 @@ impl LogBuilder {
             self.fields.dedup_by(|a, b| a.name == b.name);
             Some(Log {
                 fields: self.fields,
-                time: self.time.unwrap_or_else(|| SystemTime::now()),
+                time: self.time.unwrap_or_else(SystemTime::now),
             })
         }
     }

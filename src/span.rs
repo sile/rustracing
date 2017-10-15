@@ -129,7 +129,7 @@ impl<T> Drop for Span<T> {
             let finished = FinishedSpan {
                 operation_name: inner.operation_name,
                 start_time: inner.start_time,
-                finish_time: inner.finish_time.unwrap_or_else(|| SystemTime::now()),
+                finish_time: inner.finish_time.unwrap_or_else(SystemTime::now),
                 references: inner.references,
                 tags: inner.tags,
                 logs: inner.logs,
@@ -369,7 +369,7 @@ impl<T> Deref for SpanReference<T> {
     type Target = T;
     fn deref(&self) -> &T {
         match *self {
-            SpanReference::ChildOf(ref x) => x,
+            SpanReference::ChildOf(ref x) |
             SpanReference::FollowsFrom(ref x) => x,
         }
     }
@@ -474,7 +474,7 @@ where
         let context = T::from(self.span());
         Span::new(
             self.operation_name,
-            self.start_time.unwrap_or_else(|| SystemTime::now()),
+            self.start_time.unwrap_or_else(SystemTime::now),
             self.references,
             self.tags,
             context,
@@ -491,7 +491,7 @@ where
         }
         Span::new(
             self.operation_name,
-            self.start_time.unwrap_or_else(|| SystemTime::now()),
+            self.start_time.unwrap_or_else(SystemTime::now),
             self.references,
             self.tags,
             context,

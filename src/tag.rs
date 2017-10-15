@@ -175,7 +175,7 @@ impl StdTag {
     ///
     /// E.g., 200, 503, 404
     pub fn http_status_code(value: u16) -> Tag {
-        Tag::new("http.status_code", value as i64)
+        Tag::new("http.status_code", i64::from(value))
     }
 
     /// Makes a `"http.url"` tag.
@@ -246,7 +246,7 @@ impl StdTag {
     ///
     /// E.g., `80`
     pub fn peer_port(value: u16) -> Tag {
-        Tag::new("peer.port", value as i64)
+        Tag::new("peer.port", i64::from(value))
     }
 
     /// Makes a `"peer.service"` tag.
@@ -267,7 +267,7 @@ impl StdTag {
     /// If `0`, a hint to the trace to not-capture the trace.
     /// If absent, the `Tracer` should use its default sampling mechanism.
     pub fn sampling_priority(value: u32) -> Tag {
-        Tag::new("sampling.priority", value as i64)
+        Tag::new("sampling.priority", i64::from(value))
     }
 
     /// Makes a `"span.ind"` tag.

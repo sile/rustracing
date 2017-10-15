@@ -50,7 +50,7 @@ impl<S: Sampler<T>, T> Tracer<S, T> {
 impl<S, T> Clone for Tracer<S, T> {
     fn clone(&self) -> Self {
         Tracer {
-            sampler: self.sampler.clone(),
+            sampler: Arc::clone(&self.sampler),
             span_tx: self.span_tx.clone(),
         }
     }
