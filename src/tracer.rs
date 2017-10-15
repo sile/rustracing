@@ -6,6 +6,20 @@ use sampler::Sampler;
 use span::{StartSpanOptions, FinishedSpan, SpanReceiver};
 
 /// Tracer.
+///
+/// # Examples
+///
+/// ```
+/// use rustracing::Tracer;
+/// use rustracing::sampler::AllSampler;
+///
+/// let (tracer, span_rx) = Tracer::new(AllSampler);
+/// {
+///    let _span = tracer.span("foo").start_with_context(());
+/// }
+/// let span = span_rx.try_recv().unwrap();
+/// assert_eq!(span.operation_name(), "foo");
+/// ```
 #[derive(Debug)]
 pub struct Tracer<S, T> {
     sampler: Arc<S>,

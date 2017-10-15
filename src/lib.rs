@@ -15,7 +15,6 @@ extern crate trackable;
 
 pub use error::{Error, ErrorKind};
 pub use tracer::Tracer;
-pub use span::Span;
 
 pub mod carrier;
 pub mod convert;
