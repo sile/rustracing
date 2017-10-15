@@ -29,3 +29,19 @@ mod tracer;
 
 /// This crate specific `Result` type.
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod test {
+    use sampler::AllSampler;
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let (tracer, span_rx) = Tracer::new(AllSampler);
+        {
+            let _span = tracer.span("it_works").start_with_context(());
+        }
+        let span = span_rx.try_recv().unwrap();
+        assert_eq!(span.operation_name(), "it_works");
+    }
+}
