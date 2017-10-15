@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::mpsc;
 use std::time::SystemTime;
 
+use sampler::Sampler;
 use span::{FinishedSpan, Span, SpanReceiver, SpanReference, BaggageItem, SpanContext};
 use tag::Tag;
 use convert::MaybeAsRef;
@@ -104,7 +105,7 @@ where
         self.tags.dedup_by(|a, b| a.name() == b.name());
         self.baggage_items.reverse();
 
-        if !self.tracer.sampler.select(self.options()) {
+        if !self.tracer.sampler.is_sampled(&self.options()) {
             return Span::disabled();
         }
 
@@ -125,7 +126,7 @@ where
         self.tags.dedup_by(|a, b| a.name() == b.name());
         self.baggage_items.reverse();
 
-        if !self.tracer.sampler.select(self.options()) {
+        if !self.tracer.sampler.is_sampled(&self.options()) {
             return Span::disabled();
         }
 
@@ -177,34 +178,3 @@ impl<S, T> Clone for Tracer<S, T> {
         }
     }
 }
-
-pub trait Sampler<T> {
-    fn select(&self, span: SpanOptions<T>) -> bool;
-}
-impl<T> Sampler<T> for Box<Sampler<T> + Send + 'static> {
-    fn select(&self, span: SpanOptions<T>) -> bool {
-        (**self).select(span)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DiscardSampler;
-impl<T> Sampler<T> for DiscardSampler {
-    fn select(&self, _span: SpanOptions<T>) -> bool {
-        false
-    }
-}
-
-// TODO: name
-#[derive(Debug, Clone)]
-pub struct AlwaysSampler;
-impl<T> Sampler<T> for AlwaysSampler {
-    fn select(&self, _span: SpanOptions<T>) -> bool {
-        true
-    }
-}
-
-// TODO: ProbabilisticSampler
-// TODO: PassiveSampler (?)
-
-pub type NoopTracer<T> = Tracer<DiscardSampler, T>;

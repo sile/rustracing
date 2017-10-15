@@ -8,16 +8,18 @@
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 #![warn(missing_docs)]
 extern crate backtrace;
+extern crate rand;
 #[macro_use]
 extern crate trackable;
 
 pub use error::{Error, ErrorKind};
-pub use trace::{Tracer, Sampler, NoopTracer, DiscardSampler, AlwaysSampler, SpanOptions};
+pub use trace::{Tracer, SpanOptions};
 pub use span::Span;
 
 pub mod carrier;
 pub mod convert;
 pub mod log;
+pub mod sampler;
 pub mod span;
 pub mod tag;
 
