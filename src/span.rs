@@ -82,7 +82,7 @@ impl<T> Span<T> {
     }
     pub fn set_tag(&mut self, tag: Tag) {
         if let Some(inner) = self.0.as_mut() {
-            inner.tags.retain(|x| x.key() != tag.key());
+            inner.tags.retain(|x| x.name() != tag.name());
             inner.tags.push(tag);
         }
     }

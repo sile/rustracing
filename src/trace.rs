@@ -100,8 +100,8 @@ where
         T: for<'b> From<SpanOptions<'b, T>>,
     {
         self.tags.reverse();
-        self.tags.sort_by(|a, b| a.key().cmp(b.key()));
-        self.tags.dedup_by(|a, b| a.key() == b.key());
+        self.tags.sort_by(|a, b| a.name().cmp(b.name()));
+        self.tags.dedup_by(|a, b| a.name() == b.name());
         self.baggage_items.reverse();
 
         if !self.tracer.sampler.select(self.options()) {
@@ -121,8 +121,8 @@ where
     // TODO: F
     pub fn start_with_state(mut self, state: T) -> Span<T> {
         self.tags.reverse();
-        self.tags.sort_by(|a, b| a.key().cmp(b.key()));
-        self.tags.dedup_by(|a, b| a.key() == b.key());
+        self.tags.sort_by(|a, b| a.name().cmp(b.name()));
+        self.tags.dedup_by(|a, b| a.name() == b.name());
         self.baggage_items.reverse();
 
         if !self.tracer.sampler.select(self.options()) {

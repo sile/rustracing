@@ -24,4 +24,5 @@ pub mod tag;
 mod error;
 mod trace;
 
+/// This crate specific `Result` type.
 pub type Result<T> = std::result::Result<T, Error>;

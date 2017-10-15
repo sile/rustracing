@@ -163,7 +163,7 @@ impl<'a> StdLogFieldsBuilder<'a> {
 ///
 /// This builder automatically inserts the field `LogField::new("event", "error")`.
 ///
-/// [the standard log fields]: https://github.com/opentracing/specification/blob/master/semantic_conventions.md#log-fields-table
+/// [the standard error log fields]: https://github.com/opentracing/specification/blob/master/semantic_conventions.md#log-fields-table
 #[derive(Debug)]
 pub struct StdErrorLogFieldsBuilder<'a>(&'a mut LogBuilder);
 impl<'a> StdErrorLogFieldsBuilder<'a> {
