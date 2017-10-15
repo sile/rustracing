@@ -263,9 +263,9 @@ impl StdTag {
 
     /// Makes a `"samplingpriority"` tag.
     ///
-    /// If greater than `0`, a hint to the `Sampler` to do its best to capture the trace.
+    /// If greater than `0`, a hint to the `Tracer` to do its best to capture the trace.
     /// If `0`, a hint to the trace to not-capture the trace.
-    /// If absent, the `Sampler` should use its default sampling mechanism.
+    /// If absent, the `Tracer` should use its default sampling mechanism.
     pub fn sampling_priority(value: u32) -> Tag {
         Tag::new("sampling.priority", value as i64)
     }

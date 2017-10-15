@@ -1,13 +1,13 @@
 //! `Sampler` trait and its built-in implementations.
-use std::sync::Arc;
 use rand::{self, Rng};
 
-use {Result, ErrorKind, SpanOptions};
+use {Result, ErrorKind};
+use span::CandidateSpan;
 
 /// `Sampler` decides whether a new trace should be sampled or not.
 pub trait Sampler<T> {
     /// This method decides whether a trace with given `span` should be sampled.
-    fn is_sampled(&self, span: &SpanOptions<T>) -> bool;
+    fn is_sampled(&self, span: &CandidateSpan<T>) -> bool;
 
     /// Returns the sampler that samples a trace if `self` or `other` decides to sample it.
     fn or<U>(self, other: U) -> OrSampler<Self, U>
@@ -32,11 +32,11 @@ pub trait Sampler<T> {
     where
         Self: Sized + Send + 'static,
     {
-        Arc::new(Box::new(self))
+        Box::new(self)
     }
 }
 impl<T> Sampler<T> for BoxSampler<T> {
-    fn is_sampled(&self, span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, span: &CandidateSpan<T>) -> bool {
         (**self).is_sampled(span)
     }
     fn boxed(self) -> BoxSampler<T>
@@ -48,7 +48,7 @@ impl<T> Sampler<T> for BoxSampler<T> {
 }
 
 /// Boxed version of `Sampler`.
-pub type BoxSampler<T> = Arc<Box<Sampler<T> + Send + 'static>>;
+pub type BoxSampler<T> = Box<Sampler<T> + Send + 'static>;
 
 /// This samples a certain percentage of traces.
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ impl ProbabilisticSampler {
     }
 }
 impl<T> Sampler<T> for ProbabilisticSampler {
-    fn is_sampled(&self, _span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, _span: &CandidateSpan<T>) -> bool {
         rand::thread_rng().gen_range(0.0, 1.0) < self.sampling_rate
     }
 }
@@ -78,7 +78,7 @@ impl<T> Sampler<T> for ProbabilisticSampler {
 #[derive(Debug, Clone)]
 pub struct PassiveSampler;
 impl<T> Sampler<T> for PassiveSampler {
-    fn is_sampled(&self, span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, span: &CandidateSpan<T>) -> bool {
         !span.references().is_empty()
     }
 }
@@ -87,7 +87,7 @@ impl<T> Sampler<T> for PassiveSampler {
 #[derive(Debug, Clone)]
 pub struct NoopSampler;
 impl<T> Sampler<T> for NoopSampler {
-    fn is_sampled(&self, _span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, _span: &CandidateSpan<T>) -> bool {
         false
     }
 }
@@ -96,7 +96,7 @@ impl<T> Sampler<T> for NoopSampler {
 #[derive(Debug, Clone)]
 pub struct AllSampler;
 impl<T> Sampler<T> for AllSampler {
-    fn is_sampled(&self, _span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, _span: &CandidateSpan<T>) -> bool {
         true
     }
 }
@@ -109,7 +109,7 @@ where
     A: Sampler<T>,
     B: Sampler<T>,
 {
-    fn is_sampled(&self, span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, span: &CandidateSpan<T>) -> bool {
         self.0.is_sampled(span) || self.1.is_sampled(span)
     }
 }
@@ -122,7 +122,7 @@ where
     A: Sampler<T>,
     B: Sampler<T>,
 {
-    fn is_sampled(&self, span: &SpanOptions<T>) -> bool {
+    fn is_sampled(&self, span: &CandidateSpan<T>) -> bool {
         self.0.is_sampled(span) && self.1.is_sampled(span)
     }
 }

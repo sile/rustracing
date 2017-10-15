@@ -13,7 +13,7 @@ extern crate rand;
 extern crate trackable;
 
 pub use error::{Error, ErrorKind};
-pub use trace::{Tracer, SpanOptions};
+pub use tracer::Tracer;
 pub use span::Span;
 
 pub mod carrier;
@@ -24,7 +24,7 @@ pub mod span;
 pub mod tag;
 
 mod error;
-mod trace;
+mod tracer;
 
 /// This crate specific `Result` type.
 pub type Result<T> = std::result::Result<T, Error>;
