@@ -1,7 +1,6 @@
 //! Span.
 use std::borrow::Cow;
 use std::io::{Read, Write};
-use std::ops::Deref;
 use std::sync::mpsc;
 use std::time::SystemTime;
 
@@ -233,6 +232,11 @@ pub struct SpanContext<T> {
     baggage_items: Vec<BaggageItem>,
 }
 impl<T> SpanContext<T> {
+    /// Returns the implementation-dependent state of this context.
+    pub fn state(&self) -> &T {
+        &self.state
+    }
+
     /// Returns the baggage items associated with this context.
     pub fn baggage_items(&self) -> &[BaggageItem] {
         &self.baggage_items
@@ -299,17 +303,6 @@ impl<T> SpanContext<T> {
         }
     }
 }
-impl<T> Deref for SpanContext<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.state
-    }
-}
-impl<T> AsRef<T> for SpanContext<T> {
-    fn as_ref(&self) -> &T {
-        &self.state
-    }
-}
 impl<T> MaybeAsRef<SpanContext<T>> for SpanContext<T> {
     fn maybe_as_ref(&self) -> Option<&Self> {
         Some(self)
@@ -363,6 +356,14 @@ pub enum SpanReference<T> {
     FollowsFrom(T),
 }
 impl<T> SpanReference<T> {
+    /// Returns the span context state of this reference.
+    pub fn span(&self) -> &T {
+        match *self {
+            SpanReference::ChildOf(ref x) |
+            SpanReference::FollowsFrom(ref x) => x,
+        }
+    }
+
     /// Returns `true` if this is a `ChildOf` reference.
     pub fn is_child_of(&self) -> bool {
         if let SpanReference::ChildOf(_) = *self {
@@ -379,20 +380,6 @@ impl<T> SpanReference<T> {
         } else {
             false
         }
-    }
-}
-impl<T> Deref for SpanReference<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        match *self {
-            SpanReference::ChildOf(ref x) |
-            SpanReference::FollowsFrom(ref x) => x,
-        }
-    }
-}
-impl<T> AsRef<T> for SpanReference<T> {
-    fn as_ref(&self) -> &T {
-        self.deref()
     }
 }
 
@@ -453,7 +440,7 @@ where
         T: Clone,
     {
         if let Some(context) = context.maybe_as_ref() {
-            let reference = SpanReference::ChildOf(context.as_ref().clone());
+            let reference = SpanReference::ChildOf(context.state().clone());
             self.references.push(reference);
             self.baggage_items.extend(
                 context.baggage_items().iter().cloned(),
@@ -469,7 +456,7 @@ where
         T: Clone,
     {
         if let Some(context) = context.maybe_as_ref() {
-            let reference = SpanReference::FollowsFrom(context.as_ref().clone());
+            let reference = SpanReference::FollowsFrom(context.state().clone());
             self.references.push(reference);
             self.baggage_items.extend(
                 context.baggage_items().iter().cloned(),
