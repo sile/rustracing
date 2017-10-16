@@ -63,14 +63,14 @@ where
 }
 
 /// This trait allows to extract `SpanContext` from HTTP header.
-pub trait ExtractFromHttpHeader<T>: Sized
+pub trait ExtractFromHttpHeader<'a, T>: Sized
 where
-    T: GetHttpHeaderField,
+    T: IterHttpHeaderFields<'a>,
 {
     /// Extracts `SpanContext` from `carrier`.
     ///
     /// If `carrier` contains no span context, it will return `Ok(None)`.
-    fn extract_from_http_header(carrier: &T) -> Result<Option<SpanContext<Self>>>;
+    fn extract_from_http_header(carrier: &'a T) -> Result<Option<SpanContext<Self>>>;
 }
 
 /// This trait allows to insert fields in a HTTP header.
@@ -79,10 +79,13 @@ pub trait SetHttpHeaderField {
     fn set_http_header_field(&mut self, name: &str, value: &str) -> Result<()>;
 }
 
-/// This trait allows to get the value of fields in a HTTP header.
-pub trait GetHttpHeaderField {
-    /// Gets the value of the field named `name` in the HTTP header.
-    fn get_http_header_field(&self, name: &str) -> Result<Option<&str>>;
+/// This trait allows to iterate over the fields of a HTTP header.
+pub trait IterHttpHeaderFields<'a> {
+    /// Iterator for traversing HTTP header fields.
+    type Iter: Iterator<Item = (&'a str, &'a [u8])>;
+
+    /// Returns the iterator for traversing the HTTP header fields.
+    fn iter(&'a self) -> Self::Iter;
 }
 
 /// This trait allows to inject `SpanContext` to binary stream.

@@ -275,10 +275,10 @@ impl<T> SpanContext<T> {
     }
 
     /// Extracts a context from the **HTTP Header** `carrier`.
-    pub fn extract_from_http_header<C>(carrier: &C) -> Result<Option<Self>>
+    pub fn extract_from_http_header<'a, C>(carrier: &'a C) -> Result<Option<Self>>
     where
-        C: carrier::GetHttpHeaderField,
-        T: carrier::ExtractFromHttpHeader<C>,
+        C: carrier::IterHttpHeaderFields<'a>,
+        T: carrier::ExtractFromHttpHeader<'a, C>,
     {
         track!(T::extract_from_http_header(carrier))
     }
