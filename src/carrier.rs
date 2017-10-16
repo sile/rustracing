@@ -82,10 +82,10 @@ pub trait SetHttpHeaderField {
 /// This trait allows to iterate over the fields of a HTTP header.
 pub trait IterHttpHeaderFields<'a> {
     /// Iterator for traversing HTTP header fields.
-    type Iter: Iterator<Item = (&'a str, &'a [u8])>;
+    type Fields: Iterator<Item = (&'a str, &'a [u8])>;
 
-    /// Returns the iterator for traversing the HTTP header fields.
-    fn iter(&'a self) -> Self::Iter;
+    /// Returns an iterator for traversing the HTTP header fields.
+    fn fields(&'a self) -> Self::Fields;
 }
 
 /// This trait allows to inject `SpanContext` to binary stream.
