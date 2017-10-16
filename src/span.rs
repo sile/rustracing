@@ -232,6 +232,17 @@ pub struct SpanContext<T> {
     baggage_items: Vec<BaggageItem>,
 }
 impl<T> SpanContext<T> {
+    /// Makes a new `SpanContext` instance.
+    pub fn new(state: T, mut baggage_items: Vec<BaggageItem>) -> Self {
+        baggage_items.reverse();
+        baggage_items.sort_by(|a, b| a.name().cmp(b.name()));
+        baggage_items.dedup_by(|a, b| a.name() == b.name());
+        SpanContext {
+            state,
+            baggage_items,
+        }
+    }
+
     /// Returns the implementation-dependent state of this context.
     pub fn state(&self) -> &T {
         &self.state
@@ -294,13 +305,6 @@ impl<T> SpanContext<T> {
         T: carrier::ExtractFromBinary<C>,
     {
         track!(T::extract_from_binary(carrier))
-    }
-
-    pub(crate) fn new(state: T, baggage_items: Vec<BaggageItem>) -> Self {
-        SpanContext {
-            state,
-            baggage_items,
-        }
     }
 }
 impl<T> MaybeAsRef<SpanContext<T>> for SpanContext<T> {
