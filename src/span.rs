@@ -22,6 +22,22 @@ pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
 #[derive(Debug)]
 pub struct Span<T>(Option<SpanInner<T>>);
 impl<T> Span<T> {
+    /// Makes an inactive span.
+    ///
+    /// This span is never traced.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rustracing::span::Span;
+    ///
+    /// let span = Span::<()>::inactive();
+    /// assert!(! span.is_sampled());
+    /// ```
+    pub fn inactive() -> Self {
+        Span(None)
+    }
+
     /// Returns `true` if this span is sampled (i.e., being traced).
     pub fn is_sampled(&self) -> bool {
         self.0.is_some()
