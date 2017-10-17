@@ -9,7 +9,7 @@ rustracing
 
 [OpenTracing] API for Rust.
 
-[Documentation](https://docs.rs/thrift_codec)
+[Documentation](https://docs.rs/rustracing)
 
 References
 ----------
