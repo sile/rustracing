@@ -30,7 +30,7 @@ pub trait Sampler<T> {
     /// Converts into `BoxSampler`.
     fn boxed(self) -> BoxSampler<T>
     where
-        Self: Sized + Send + 'static,
+        Self: Sized + Send + Sync + 'static,
     {
         Box::new(self)
     }
@@ -48,7 +48,7 @@ impl<T> Sampler<T> for BoxSampler<T> {
 }
 
 /// Boxed version of `Sampler`.
-pub type BoxSampler<T> = Box<Sampler<T> + Send + 'static>;
+pub type BoxSampler<T> = Box<Sampler<T> + Send + Sync + 'static>;
 
 /// This samples a certain percentage of traces.
 #[derive(Debug, Clone)]
