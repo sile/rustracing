@@ -38,8 +38,13 @@ mod test {
     fn it_works() {
         let (tracer, span_rx) = Tracer::new(AllSampler);
         {
-            let _span = tracer.span("it_works").start_with_context(());
+            let span = tracer.span("it_works").start_with_context(());
+            let _child = span.child("child", |options| options.start_with_state(()));
         }
+
+        let span = span_rx.try_recv().unwrap();
+        assert_eq!(span.operation_name(), "child");
+
         let span = span_rx.try_recv().unwrap();
         assert_eq!(span.operation_name(), "it_works");
     }

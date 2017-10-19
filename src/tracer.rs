@@ -38,20 +38,21 @@ impl<S: Sampler<T>, T> Tracer<S, T> {
         )
     }
 
-    /// Clone with the given `sampler`.
-    pub fn clone_with_sampler<U: Sampler<T>>(&self, sampler: U) -> Tracer<U, T> {
-        Tracer {
-            sampler: Arc::new(sampler),
-            span_tx: self.span_tx.clone(),
-        }
-    }
-
     /// Returns `StartSpanOptions` for starting a span which has the name `operation_name`.
     pub fn span<N>(&self, operation_name: N) -> StartSpanOptions<S, T>
     where
         N: Into<Cow<'static, str>>,
     {
         StartSpanOptions::new(self, operation_name)
+    }
+}
+impl<S, T> Tracer<S, T> {
+    /// Clone with the given `sampler`.
+    pub fn clone_with_sampler<U: Sampler<T>>(&self, sampler: U) -> Tracer<U, T> {
+        Tracer {
+            sampler: Arc::new(sampler),
+            span_tx: self.span_tx.clone(),
+        }
     }
 
     pub(crate) fn sampler(&self) -> &S {
