@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::mpsc;
 
 use sampler::Sampler;
-use span::{StartSpanOptions, FinishedSpan, SpanReceiver};
+use span::{StartSpanOptions, SpanReceiver, SpanSender};
 
 /// Tracer.
 ///
@@ -15,7 +15,7 @@ use span::{StartSpanOptions, FinishedSpan, SpanReceiver};
 ///
 /// let (tracer, span_rx) = Tracer::new(AllSampler);
 /// {
-///    let _span = tracer.span("foo").start_with_context(());
+///    let _span = tracer.span("foo").start_with_state(());
 /// }
 /// let span = span_rx.try_recv().unwrap();
 /// assert_eq!(span.operation_name(), "foo");
@@ -23,7 +23,7 @@ use span::{StartSpanOptions, FinishedSpan, SpanReceiver};
 #[derive(Debug)]
 pub struct Tracer<S, T> {
     sampler: Arc<S>,
-    span_tx: mpsc::Sender<FinishedSpan<T>>,
+    span_tx: SpanSender<T>,
 }
 impl<S: Sampler<T>, T> Tracer<S, T> {
     /// Makes a new `Tracer` instance.
@@ -43,7 +43,7 @@ impl<S: Sampler<T>, T> Tracer<S, T> {
     where
         N: Into<Cow<'static, str>>,
     {
-        StartSpanOptions::new(self, operation_name)
+        StartSpanOptions::new(operation_name, &self.span_tx, &self.sampler)
     }
 }
 impl<S, T> Tracer<S, T> {
@@ -53,13 +53,6 @@ impl<S, T> Tracer<S, T> {
             sampler: Arc::new(sampler),
             span_tx: self.span_tx.clone(),
         }
-    }
-
-    pub(crate) fn sampler(&self) -> &S {
-        &self.sampler
-    }
-    pub(crate) fn span_tx(&self) -> mpsc::Sender<FinishedSpan<T>> {
-        self.span_tx.clone()
     }
 }
 impl<S, T> Clone for Tracer<S, T> {

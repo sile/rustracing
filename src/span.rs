@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::SystemTime;
 
-use {Result, Tracer};
+use Result;
 use carrier;
 use convert::MaybeAsRef;
 use log::{Log, LogBuilder};
@@ -13,6 +13,8 @@ use tag::{Tag, TagValue};
 
 /// Finished span receiver.
 pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
+
+pub(crate) type SpanSender<T> = mpsc::Sender<FinishedSpan<T>>;
 
 /// Span.
 ///
@@ -42,7 +44,9 @@ impl<T> Span<T> {
     where
         T: Clone,
     {
-        SpanHandle(self.0.as_ref().map(|inner| inner.context.clone()))
+        SpanHandle(self.0.as_ref().map(|inner| {
+            (inner.context.clone(), inner.span_tx.clone())
+        }))
     }
 
     /// Returns `true` if this span is sampled (i.e., being traced).
@@ -130,11 +134,7 @@ impl<T> Span<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(inner) = self.0.as_ref() {
-            f(inner.context.child(operation_name))
-        } else {
-            Span::inactive()
-        }
+        self.handle().child(operation_name, f)
     }
 
     /// Starts a `FollowsFrom` span if this span is sampled.
@@ -144,23 +144,19 @@ impl<T> Span<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(inner) = self.0.as_ref() {
-            f(inner.context.follower(operation_name))
-        } else {
-            Span::inactive()
-        }
+        self.handle().follower(operation_name, f)
     }
 
-    pub(crate) fn new<S>(
+    pub(crate) fn new(
         operation_name: Cow<'static, str>,
         start_time: SystemTime,
         references: Vec<SpanReference<T>>,
         tags: Vec<Tag>,
         state: T,
         baggage_items: Vec<BaggageItem>,
-        tracer: &Tracer<S, T>,
+        span_tx: SpanSender<T>,
     ) -> Self {
-        let context = SpanContext::new(state, baggage_items, tracer);
+        let context = SpanContext::new(state, baggage_items);
         let inner = SpanInner {
             operation_name,
             start_time,
@@ -169,6 +165,7 @@ impl<T> Span<T> {
             tags,
             logs: Vec::new(),
             context,
+            span_tx,
         };
         Span(Some(inner))
     }
@@ -176,7 +173,6 @@ impl<T> Span<T> {
 impl<T> Drop for Span<T> {
     fn drop(&mut self) {
         if let Some(inner) = self.0.take() {
-            let tx = inner.context.tracer.span_tx().clone();
             let finished = FinishedSpan {
                 operation_name: inner.operation_name,
                 start_time: inner.start_time,
@@ -186,7 +182,7 @@ impl<T> Drop for Span<T> {
                 logs: inner.logs,
                 context: inner.context,
             };
-            let _ = tx.send(finished);
+            let _ = inner.span_tx.send(finished);
         }
     }
 }
@@ -205,6 +201,7 @@ struct SpanInner<T> {
     tags: Vec<Tag>,
     logs: Vec<Log>,
     context: SpanContext<T>,
+    span_tx: SpanSender<T>,
 }
 
 /// Finished span.
@@ -265,18 +262,16 @@ impl<T> FinishedSpan<T> {
 pub struct SpanContext<T> {
     state: T,
     baggage_items: Vec<BaggageItem>,
-    tracer: Tracer<AllSampler, T>,
 }
 impl<T> SpanContext<T> {
     /// Makes a new `SpanContext` instance.
-    pub fn new<S>(state: T, mut baggage_items: Vec<BaggageItem>, tracer: &Tracer<S, T>) -> Self {
+    pub fn new(state: T, mut baggage_items: Vec<BaggageItem>) -> Self {
         baggage_items.reverse();
         baggage_items.sort_by(|a, b| a.name().cmp(b.name()));
         baggage_items.dedup_by(|a, b| a.name() == b.name());
         SpanContext {
             state,
             baggage_items,
-            tracer: tracer.clone_with_sampler(AllSampler),
         }
     }
 
@@ -288,24 +283,6 @@ impl<T> SpanContext<T> {
     /// Returns the baggage items associated with this context.
     pub fn baggage_items(&self) -> &[BaggageItem] {
         &self.baggage_items
-    }
-
-    /// Returns `StartSpanOptions` for starting a `ChildOf` span.
-    pub fn child<N>(&self, operation_name: N) -> StartSpanOptions<AllSampler, T>
-    where
-        N: Into<Cow<'static, str>>,
-        T: Clone,
-    {
-        self.tracer.span(operation_name).child_of(self)
-    }
-
-    /// Returns `StartSpanOptions` for starting a `FollowsFrom` span.
-    pub fn follower<N>(&self, operation_name: N) -> StartSpanOptions<AllSampler, T>
-    where
-        N: Into<Cow<'static, str>>,
-        T: Clone,
-    {
-        self.tracer.span(operation_name).follows_from(self)
     }
 
     /// Injects this context to the **Text Map** `carrier`.
@@ -469,12 +446,13 @@ impl<'a, T: 'a> CandidateSpan<'a, T> {
 /// Options for starting a span.
 #[derive(Debug)]
 pub struct StartSpanOptions<'a, S: 'a, T: 'a> {
-    tracer: &'a Tracer<S, T>,
     operation_name: Cow<'static, str>,
     start_time: Option<SystemTime>,
     tags: Vec<Tag>,
     references: Vec<SpanReference<T>>,
     baggage_items: Vec<BaggageItem>,
+    span_tx: &'a SpanSender<T>,
+    sampler: &'a S,
 }
 impl<'a, S: 'a, T: 'a> StartSpanOptions<'a, S, T>
 where
@@ -541,7 +519,7 @@ where
             self.tags,
             state,
             self.baggage_items,
-            self.tracer,
+            self.span_tx.clone(),
         )
     }
 
@@ -558,21 +536,22 @@ where
             self.tags,
             state,
             self.baggage_items,
-            self.tracer,
+            self.span_tx.clone(),
         )
     }
 
-    pub(crate) fn new<N>(tracer: &'a Tracer<S, T>, operation_name: N) -> Self
+    pub(crate) fn new<N>(operation_name: N, span_tx: &'a SpanSender<T>, sampler: &'a S) -> Self
     where
         N: Into<Cow<'static, str>>,
     {
         StartSpanOptions {
-            tracer,
             operation_name: operation_name.into(),
             start_time: None,
             tags: Vec::new(),
             references: Vec::new(),
             baggage_items: Vec::new(),
+            span_tx,
+            sampler,
         }
     }
 
@@ -603,14 +582,14 @@ where
         {
             n > 0
         } else {
-            self.tracer.sampler().is_sampled(&self.span())
+            self.sampler.is_sampled(&self.span())
         }
     }
 }
 
 /// Immutable handle of `Span`.
 #[derive(Debug, Clone)]
-pub struct SpanHandle<T>(Option<SpanContext<T>>);
+pub struct SpanHandle<T>(Option<(SpanContext<T>, SpanSender<T>)>);
 impl<T> SpanHandle<T> {
     /// Returns `true` if this span is sampled (i.e., being traced).
     pub fn is_sampled(&self) -> bool {
@@ -619,12 +598,12 @@ impl<T> SpanHandle<T> {
 
     /// Returns the context of this span.
     pub fn context(&self) -> Option<&SpanContext<T>> {
-        self.0.as_ref()
+        self.0.as_ref().map(|&(ref context, _)| context)
     }
 
     /// Gets the baggage item that has the name `name`.
     pub fn get_baggage_item(&self, name: &str) -> Option<&BaggageItem> {
-        if let Some(context) = self.0.as_ref() {
+        if let Some(context) = self.context() {
             context.baggage_items.iter().find(|x| x.name == name)
         } else {
             None
@@ -638,8 +617,10 @@ impl<T> SpanHandle<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(context) = self.0.as_ref() {
-            f(context.child(operation_name))
+        if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
+            let options = StartSpanOptions::new(operation_name, span_tx, &AllSampler)
+                .child_of(context);
+            f(options)
         } else {
             Span::inactive()
         }
@@ -652,8 +633,10 @@ impl<T> SpanHandle<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(context) = self.0.as_ref() {
-            f(context.follower(operation_name))
+        if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
+            let options = StartSpanOptions::new(operation_name, span_tx, &AllSampler)
+                .follows_from(context);
+            f(options)
         } else {
             Span::inactive()
         }
