@@ -1,6 +1,6 @@
 //! Span tag.
 use std::borrow::Cow;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 
 /// Span tag.
 #[derive(Debug, Clone)]
@@ -226,6 +226,11 @@ impl StdTag {
         V: Into<Cow<'static, str>>,
     {
         Tag::new("peer.hostname", value.into())
+    }
+
+    /// Makes a `"peer.ipXX"` and `"peer.port"` tags.
+    pub fn peer_addr(value: SocketAddr) -> Vec<Tag> {
+        vec![Self::peer_ip(value.ip()), Self::peer_port(value.port())]
     }
 
     /// Makes a tag which has the name either `"peer.ipv4"` or `"peer.ipv6"` depending on the value.

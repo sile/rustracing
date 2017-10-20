@@ -7,9 +7,9 @@ use std::time::SystemTime;
 use Result;
 use carrier;
 use convert::MaybeAsRef;
-use log::{Log, LogBuilder};
+use log::{Log, LogBuilder, StdErrorLogFieldsBuilder};
 use sampler::{Sampler, AllSampler};
-use tag::{Tag, TagValue};
+use tag::{Tag, TagValue, StdTag};
 
 /// Finished span receiver.
 pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
@@ -85,10 +85,21 @@ impl<T> Span<T> {
     where
         F: FnOnce() -> Tag,
     {
+        use std::iter::once;
+        self.set_tags(|| once(f()));
+    }
+
+    /// Sets the tags to this span.
+    pub fn set_tags<F, I>(&mut self, f: F)
+    where
+        F: FnOnce() -> I,
+        I: IntoIterator<Item = Tag>,
+    {
         if let Some(inner) = self.0.as_mut() {
-            let tag = f();
-            inner.tags.retain(|x| x.name() != tag.name());
-            inner.tags.push(tag);
+            for tag in f() {
+                inner.tags.retain(|x| x.name() != tag.name());
+                inner.tags.push(tag);
+            }
         }
     }
 
@@ -123,6 +134,26 @@ impl<T> Span<T> {
             f(&mut builder);
             if let Some(log) = builder.finish() {
                 inner.logs.push(log);
+            }
+        }
+    }
+
+    /// Logs an error.
+    ///
+    /// This is a simple wrapper of `log` method
+    /// except that the `StdTag::error()` tag will be set in this method.
+    pub fn error_log<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut StdErrorLogFieldsBuilder),
+    {
+        if let Some(inner) = self.0.as_mut() {
+            let mut builder = LogBuilder::new();
+            f(&mut builder.error());
+            if let Some(log) = builder.finish() {
+                inner.logs.push(log);
+            }
+            if inner.tags.iter().find(|x| x.name() == "error").is_none() {
+                inner.tags.push(StdTag::error());
             }
         }
     }

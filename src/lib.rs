@@ -32,6 +32,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[cfg(test)]
 mod test {
     use sampler::AllSampler;
+    use tag::StdTag;
     use super::*;
 
     #[test]
@@ -39,7 +40,8 @@ mod test {
         let (tracer, span_rx) = Tracer::new(AllSampler);
         {
             let span = tracer.span("it_works").start_with_state(());
-            let _child = span.child("child", |options| options.start_with_state(()));
+            let mut child = span.child("child", |options| options.start_with_state(()));
+            child.set_tags(|| StdTag::peer_addr("127.0.0.1:80".parse().unwrap()));
         }
 
         let span = span_rx.try_recv().unwrap();
