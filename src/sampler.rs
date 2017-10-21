@@ -85,8 +85,8 @@ impl<T> Sampler<T> for PassiveSampler {
 
 /// This samples no traces.
 #[derive(Debug, Clone)]
-pub struct NoopSampler;
-impl<T> Sampler<T> for NoopSampler {
+pub struct NullSampler;
+impl<T> Sampler<T> for NullSampler {
     fn is_sampled(&self, _span: &CandidateSpan<T>) -> bool {
         false
     }
