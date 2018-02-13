@@ -15,5 +15,5 @@ codecov = {repository = "sile/rustracing"}
 
 [dependencies]
 backtrace = "0.3"
-rand = "0.3"
+rand = "0.4"
 trackable = "0.2"
