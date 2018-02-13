@@ -13,7 +13,11 @@ license = "MIT"
 travis-ci = {repository = "sile/rustracing"}
 codecov = {repository = "sile/rustracing"}
 
+[features]
+stacktrace = [ "backtrace" ]
+default = [ "stacktrace" ]
+
 [dependencies]
-backtrace = "0.3"
+backtrace = { version = "0.3", optional = true}
 rand = "0.4"
 trackable = "0.2"

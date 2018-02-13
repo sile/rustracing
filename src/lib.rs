@@ -8,6 +8,7 @@
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
+#[cfg(feature = "stacktrace")]
 extern crate backtrace;
 extern crate rand;
 #[macro_use]

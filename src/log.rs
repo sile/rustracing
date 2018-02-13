@@ -2,6 +2,7 @@
 use std::borrow::Cow;
 use std::error::Error;
 use std::time::SystemTime;
+#[cfg(feature = "stacktrace")]
 use backtrace::Backtrace;
 
 /// Span log builder.
@@ -150,12 +151,11 @@ impl<'a> StdLogFieldsBuilder<'a> {
         self
     }
 
+    #[cfg(feature = "stacktrace")]
     /// Adds the field `LogField::new("stack", {stack trace})`.
     pub fn stack(&mut self) -> &mut Self {
-        self.0.field(LogField::new(
-            "stack",
-            format!("{:?}", Backtrace::new()),
-        ));
+        self.0
+            .field(LogField::new("stack", format!("{:?}", Backtrace::new())));
         self
     }
 }
@@ -203,12 +203,11 @@ impl<'a> StdErrorLogFieldsBuilder<'a> {
         self
     }
 
+    #[cfg(feature = "stacktrace")]
     /// Adds the field `LogField::new("stack", {stack trace})`.
     pub fn stack(&mut self) -> &mut Self {
-        self.0.field(LogField::new(
-            "stack",
-            format!("{:?}", Backtrace::new()),
-        ));
+        self.0
+            .field(LogField::new("stack", format!("{:?}", Backtrace::new())));
         self
     }
 }
