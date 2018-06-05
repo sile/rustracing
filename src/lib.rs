@@ -32,9 +32,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use sampler::AllSampler;
     use tag::StdTag;
-    use super::*;
 
     #[test]
     fn it_works() {

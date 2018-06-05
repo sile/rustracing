@@ -1,9 +1,9 @@
 //! Span log.
+#[cfg(feature = "stacktrace")]
+use backtrace::Backtrace;
 use std::borrow::Cow;
 use std::error::Error;
 use std::time::SystemTime;
-#[cfg(feature = "stacktrace")]
-use backtrace::Backtrace;
 
 /// Span log builder.
 #[derive(Debug)]

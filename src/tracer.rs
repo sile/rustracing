@@ -1,9 +1,9 @@
 use std::borrow::Cow;
-use std::sync::Arc;
 use std::sync::mpsc;
+use std::sync::Arc;
 
 use sampler::Sampler;
-use span::{StartSpanOptions, SpanReceiver, SpanSender};
+use span::{SpanReceiver, SpanSender, StartSpanOptions};
 
 /// Tracer.
 ///

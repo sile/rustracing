@@ -4,12 +4,12 @@ use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::SystemTime;
 
-use Result;
 use carrier;
 use convert::MaybeAsRef;
 use log::{Log, LogBuilder, StdErrorLogFieldsBuilder};
-use sampler::{Sampler, AllSampler};
-use tag::{Tag, TagValue, StdTag};
+use sampler::{AllSampler, Sampler};
+use tag::{StdTag, Tag, TagValue};
+use Result;
 
 /// Finished span receiver.
 pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;
@@ -44,9 +44,11 @@ impl<T> Span<T> {
     where
         T: Clone,
     {
-        SpanHandle(self.0.as_ref().map(|inner| {
-            (inner.context.clone(), inner.span_tx.clone())
-        }))
+        SpanHandle(
+            self.0
+                .as_ref()
+                .map(|inner| (inner.context.clone(), inner.span_tx.clone())),
+        )
     }
 
     /// Returns `true` if this span is sampled (i.e., being traced).
@@ -426,8 +428,7 @@ impl<T> SpanReference<T> {
     /// Returns the span context state of this reference.
     pub fn span(&self) -> &T {
         match *self {
-            SpanReference::ChildOf(ref x) |
-            SpanReference::FollowsFrom(ref x) => x,
+            SpanReference::ChildOf(ref x) | SpanReference::FollowsFrom(ref x) => x,
         }
     }
 
@@ -510,9 +511,8 @@ where
         if let Some(context) = context.maybe_as_ref() {
             let reference = SpanReference::ChildOf(context.state().clone());
             self.references.push(reference);
-            self.baggage_items.extend(
-                context.baggage_items().iter().cloned(),
-            );
+            self.baggage_items
+                .extend(context.baggage_items().iter().cloned());
         }
         self
     }
@@ -526,9 +526,8 @@ where
         if let Some(context) = context.maybe_as_ref() {
             let reference = SpanReference::FollowsFrom(context.state().clone());
             self.references.push(reference);
-            self.baggage_items.extend(
-                context.baggage_items().iter().cloned(),
-            );
+            self.baggage_items
+                .extend(context.baggage_items().iter().cloned());
         }
         self
     }
@@ -605,11 +604,10 @@ where
     }
 
     fn is_sampled(&self) -> bool {
-        if let Some(&TagValue::Integer(n)) =
-            self.tags
-                .iter()
-                .find(|t| t.name() == "sampling.priority")
-                .map(|t| t.value())
+        if let Some(&TagValue::Integer(n)) = self.tags
+            .iter()
+            .find(|t| t.name() == "sampling.priority")
+            .map(|t| t.value())
         {
             n > 0
         } else {
@@ -649,8 +647,8 @@ impl<T> SpanHandle<T> {
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
         if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
-            let options = StartSpanOptions::new(operation_name, span_tx, &AllSampler)
-                .child_of(context);
+            let options =
+                StartSpanOptions::new(operation_name, span_tx, &AllSampler).child_of(context);
             f(options)
         } else {
             Span::inactive()
@@ -665,8 +663,8 @@ impl<T> SpanHandle<T> {
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
         if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
-            let options = StartSpanOptions::new(operation_name, span_tx, &AllSampler)
-                .follows_from(context);
+            let options =
+                StartSpanOptions::new(operation_name, span_tx, &AllSampler).follows_from(context);
             f(options)
         } else {
             Span::inactive()

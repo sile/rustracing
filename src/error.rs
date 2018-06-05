@@ -1,5 +1,5 @@
-use trackable::error::TrackableError;
 use trackable::error::ErrorKind as TrackableErrorKind;
+use trackable::error::TrackableError;
 
 /// This crate specific error type.
 #[derive(Debug, Clone)]

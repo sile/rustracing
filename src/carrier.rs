@@ -1,9 +1,9 @@
 //! Traits for representing carriers that propagate span contexts across process boundaries.
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};
 
-use Result;
 use span::SpanContext;
+use Result;
 
 /// This trait allows to inject `SpanContext` to `TextMap`.
 pub trait InjectToTextMap<T>: Sized
