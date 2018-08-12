@@ -604,7 +604,8 @@ where
     }
 
     fn is_sampled(&self) -> bool {
-        if let Some(&TagValue::Integer(n)) = self.tags
+        if let Some(&TagValue::Integer(n)) = self
+            .tags
             .iter()
             .find(|t| t.name() == "sampling.priority")
             .map(|t| t.value())
