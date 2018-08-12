@@ -1,5 +1,43 @@
 //! [OpenTracing][opentracing] API for Rust
 //!
+//! # Examples
+//!
+//! ```
+//! # extern crate rustracing;
+//! use rustracing::sampler::AllSampler;
+//! use rustracing::tag::Tag;
+//! use rustracing::Tracer;
+//! use std::thread;
+//! use std::time::Duration;
+//!
+//! # fn main() {
+//! // Creates a tracer
+//! let (tracer, span_rx) = Tracer::new(AllSampler);
+//! {
+//!     // Starts "parent" span
+//!     let parent_span = tracer.span("parent").start_with_state(());
+//!     thread::sleep(Duration::from_millis(10));
+//!     {
+//!         // Starts "child" span
+//!         let mut child_span = tracer
+//!             .span("child_span")
+//!             .child_of(&parent_span)
+//!             .tag(Tag::new("key", "value"))
+//!             .start_with_state(());
+//!
+//!         child_span.log(|log| {
+//!             log.error().message("a log message");
+//!         });
+//!     } // The "child" span dropped and will be sent to `span_rx`
+//! } // The "parent" span dropped and will be sent to `span_rx`
+//!
+//! // Outputs finished spans to the standard output
+//! while let Ok(span) = span_rx.try_recv() {
+//!     println!("# SPAN: {:?}", span);
+//! }
+//! # }
+//! ```
+//!
 //! As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
 //! it may be helpful to looking at [rustracing_jaeger] crate.
 //!
@@ -35,10 +73,13 @@ mod tracer;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use std::thread;
+    use std::time::Duration;
+
     use super::*;
     use sampler::AllSampler;
-    use tag::StdTag;
+    use tag::{StdTag, Tag};
 
     #[test]
     fn it_works() {
@@ -54,5 +95,36 @@ mod test {
 
         let span = span_rx.try_recv().unwrap();
         assert_eq!(span.operation_name(), "it_works");
+    }
+
+    #[test]
+    fn example_code_works() {
+        // Creates a tracer
+        let (tracer, span_rx) = Tracer::new(AllSampler);
+        {
+            // Starts "parent" span
+            let parent_span = tracer.span("parent").start_with_state(());
+            thread::sleep(Duration::from_millis(10));
+            {
+                // Starts "child" span
+                let mut child_span = tracer
+                    .span("child_span")
+                    .child_of(&parent_span)
+                    .tag(Tag::new("key", "value"))
+                    .start_with_state(());
+
+                child_span.log(|log| {
+                    log.error().message("a log message");
+                });
+            } // The "child" span dropped and will be sent to `span_rx`
+        } // The "parent" span dropped and will be sent to `span_rx`
+
+        // Outputs finished spans to the standard output
+        let mut count = 0;
+        while let Ok(span) = span_rx.try_recv() {
+            println!("# SPAN: {:?}", span);
+            count += 1;
+        }
+        assert_eq!(count, 2);
     }
 }

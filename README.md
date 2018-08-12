@@ -11,6 +11,42 @@ rustracing
 
 [Documentation](https://docs.rs/rustracing)
 
+Examples
+--------
+
+```rust
+use rustracing::sampler::AllSampler;
+use rustracing::tag::Tag;
+use rustracing::Tracer;
+use std::thread;
+use std::time::Duration;
+
+// Creates a tracer
+let (tracer, span_rx) = Tracer::new(AllSampler);
+{
+    // Starts "parent" span
+    let parent_span = tracer.span("parent").start_with_state(());
+    thread::sleep(Duration::from_millis(10));
+    {
+        // Starts "child" span
+        let mut child_span = tracer
+            .span("child_span")
+            .child_of(&parent_span)
+            .tag(Tag::new("key", "value"))
+            .start_with_state(());
+
+        child_span.log(|log| {
+            log.error().message("a log message");
+        });
+    } // The "child" span dropped and will be sent to `span_rx`
+} // The "parent" span dropped and will be sent to `span_rx`
+
+// Outputs finished spans to the standard output
+while let Ok(span) = span_rx.try_recv() {
+    println!("# SPAN: {:?}", span);
+}
+```
+
 As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
 it may be helpful to looking at [rustracing_jaeger] crate.
 
