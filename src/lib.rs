@@ -1,11 +1,15 @@
 //! [OpenTracing][opentracing] API for Rust
 //!
+//! As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
+//! it may be helpful to looking at [rustracing_jaeger] crate.
+//!
 //! # References
 //!
 //! - [The OpenTracing Semantic Specification (v1.1)][specification]
 //!
 //! [opentracing]: http://opentracing.io/
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
+//! [rustracing_jaeger]: https://github.com/sile/rustracing_jaeger
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
 #[cfg(feature = "stacktrace")]

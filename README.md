@@ -11,6 +11,9 @@ rustracing
 
 [Documentation](https://docs.rs/rustracing)
 
+As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
+it may be helpful to looking at [rustracing_jaeger] crate.
+
 References
 ----------
 
@@ -18,3 +21,4 @@ References
 
 [OpenTracing]: http://opentracing.io/
 [specification]: https://github.com/opentracing/specification/blob/master/specification.md
+[rustracing_jaeger]: https://github.com/sile/rustracing_jaeger
