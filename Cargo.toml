@@ -19,5 +19,5 @@ default = [ "stacktrace" ]
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-rand = "0.5"
+rand = "0.6"
 trackable = "0.2"
