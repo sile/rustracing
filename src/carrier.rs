@@ -1,5 +1,6 @@
 //! Traits for representing carriers that propagate span contexts across process boundaries.
 use std::collections::{BTreeMap, HashMap};
+use std::hash::Hash;
 use std::io::{Read, Write};
 
 use span::SpanContext;
@@ -78,6 +79,12 @@ pub trait SetHttpHeaderField {
     /// Sets the value of the field named `name` in the HTTP header to `value`.
     fn set_http_header_field(&mut self, name: &str, value: &str) -> Result<()>;
 }
+impl SetHttpHeaderField for HashMap<String, String> {
+    fn set_http_header_field(&mut self, name: &str, value: &str) -> Result<()> {
+        self.insert(name.to_owned(), value.to_owned());
+        Ok(())
+    }
+}
 
 /// This trait allows to iterate over the fields of a HTTP header.
 pub trait IterHttpHeaderFields<'a> {
@@ -86,6 +93,17 @@ pub trait IterHttpHeaderFields<'a> {
 
     /// Returns an iterator for traversing the HTTP header fields.
     fn fields(&'a self) -> Self::Fields;
+}
+impl<'a, K, V> IterHttpHeaderFields<'a> for HashMap<K, V>
+where
+    K: AsRef<str> + Eq + Hash,
+    V: AsRef<[u8]>,
+{
+    type Fields = Box<dyn Iterator<Item = (&'a str, &'a [u8])> + 'a>;
+
+    fn fields(&'a self) -> Self::Fields {
+        Box::new(self.iter().map(|x| (x.0.as_ref(), x.1.as_ref())))
+    }
 }
 
 /// This trait allows to inject `SpanContext` to binary stream.
