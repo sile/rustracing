@@ -2,9 +2,8 @@ use trackable::error::ErrorKind as TrackableErrorKind;
 use trackable::error::TrackableError;
 
 /// This crate specific error type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TrackableError)]
 pub struct Error(TrackableError<ErrorKind>);
-derive_traits_for_trackable_error_newtype!(Error, ErrorKind);
 
 /// The list of the possible error kinds
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
