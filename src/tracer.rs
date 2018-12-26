@@ -1,9 +1,8 @@
+use crate::sampler::Sampler;
+use crate::span::{SpanReceiver, SpanSender, StartSpanOptions};
 use std::borrow::Cow;
 use std::sync::mpsc;
 use std::sync::Arc;
-
-use sampler::Sampler;
-use span::{SpanReceiver, SpanSender, StartSpanOptions};
 
 /// Tracer.
 ///

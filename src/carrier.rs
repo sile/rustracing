@@ -1,10 +1,9 @@
 //! Traits for representing carriers that propagate span contexts across process boundaries.
+use crate::span::SpanContext;
+use crate::Result;
 use std::collections::{BTreeMap, HashMap};
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 use std::io::{Read, Write};
-
-use span::SpanContext;
-use Result;
 
 /// This trait allows to inject `SpanContext` to `TextMap`.
 pub trait InjectToTextMap<T>: Sized
@@ -37,7 +36,7 @@ pub trait TextMap {
     /// Gets the value of `key'.
     fn get(&self, key: &str) -> Option<&str>;
 }
-impl TextMap for HashMap<String, String> {
+impl<S: BuildHasher> TextMap for HashMap<String, String, S> {
     fn set(&mut self, key: &str, value: &str) {
         self.insert(key.to_owned(), value.to_owned());
     }
@@ -79,7 +78,7 @@ pub trait SetHttpHeaderField {
     /// Sets the value of the field named `name` in the HTTP header to `value`.
     fn set_http_header_field(&mut self, name: &str, value: &str) -> Result<()>;
 }
-impl SetHttpHeaderField for HashMap<String, String> {
+impl<S: BuildHasher> SetHttpHeaderField for HashMap<String, String, S> {
     fn set_http_header_field(&mut self, name: &str, value: &str) -> Result<()> {
         self.insert(name.to_owned(), value.to_owned());
         Ok(())
@@ -94,10 +93,11 @@ pub trait IterHttpHeaderFields<'a> {
     /// Returns an iterator for traversing the HTTP header fields.
     fn fields(&'a self) -> Self::Fields;
 }
-impl<'a, K, V> IterHttpHeaderFields<'a> for HashMap<K, V>
+impl<'a, K, V, S> IterHttpHeaderFields<'a> for HashMap<K, V, S>
 where
     K: AsRef<str> + Eq + Hash,
     V: AsRef<[u8]>,
+    S: BuildHasher,
 {
     type Fields = Box<dyn Iterator<Item = (&'a str, &'a [u8])> + 'a>;
 

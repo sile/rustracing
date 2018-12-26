@@ -1,15 +1,14 @@
 //! Span.
+use crate::carrier;
+use crate::convert::MaybeAsRef;
+use crate::log::{Log, LogBuilder, StdErrorLogFieldsBuilder};
+use crate::sampler::{AllSampler, Sampler};
+use crate::tag::{StdTag, Tag, TagValue};
+use crate::Result;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::SystemTime;
-
-use carrier;
-use convert::MaybeAsRef;
-use log::{Log, LogBuilder, StdErrorLogFieldsBuilder};
-use sampler::{AllSampler, Sampler};
-use tag::{StdTag, Tag, TagValue};
-use Result;
 
 /// Finished span receiver.
 pub type SpanReceiver<T> = mpsc::Receiver<FinishedSpan<T>>;

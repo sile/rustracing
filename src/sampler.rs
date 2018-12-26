@@ -1,8 +1,7 @@
 //! `Sampler` trait and its built-in implementations.
+use crate::span::CandidateSpan;
+use crate::{ErrorKind, Result};
 use rand::{self, Rng};
-
-use span::CandidateSpan;
-use {ErrorKind, Result};
 
 /// `Sampler` decides whether a new trace should be sampled or not.
 pub trait Sampler<T> {

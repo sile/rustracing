@@ -197,6 +197,7 @@ impl<'a> StdErrorLogFieldsBuilder<'a> {
     /// Adds `"error.kind"` and `"message"` fields.
     ///
     /// These values are `error.description()` and `error.to_string()` respectively.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn object<T: Error>(&mut self, error: T) -> &mut Self {
         self.kind(error.description().to_owned());
         self.message(error.to_string());

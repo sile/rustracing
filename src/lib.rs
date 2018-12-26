@@ -3,14 +3,12 @@
 //! # Examples
 //!
 //! ```
-//! # extern crate rustracing;
 //! use rustracing::sampler::AllSampler;
 //! use rustracing::tag::Tag;
 //! use rustracing::Tracer;
 //! use std::thread;
 //! use std::time::Duration;
 //!
-//! # fn main() {
 //! // Creates a tracer
 //! let (tracer, span_rx) = Tracer::new(AllSampler);
 //! {
@@ -35,7 +33,6 @@
 //! while let Ok(span) = span_rx.try_recv() {
 //!     println!("# SPAN: {:?}", span);
 //! }
-//! # }
 //! ```
 //!
 //! As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
@@ -49,15 +46,12 @@
 //! [specification]: https://github.com/opentracing/specification/blob/master/specification.md
 //! [rustracing_jaeger]: https://github.com/sile/rustracing_jaeger
 #![warn(missing_docs)]
-#![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
-#[cfg(feature = "stacktrace")]
-extern crate backtrace;
-extern crate rand;
+#![allow(clippy::new_ret_no_self)]
 #[macro_use]
 extern crate trackable;
 
-pub use error::{Error, ErrorKind};
-pub use tracer::Tracer;
+pub use crate::error::{Error, ErrorKind};
+pub use crate::tracer::Tracer;
 
 pub mod carrier;
 pub mod convert;
@@ -74,12 +68,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::sampler::AllSampler;
+    use crate::tag::{StdTag, Tag};
     use std::thread;
     use std::time::Duration;
-
-    use super::*;
-    use sampler::AllSampler;
-    use tag::{StdTag, Tag};
 
     #[test]
     fn it_works() {

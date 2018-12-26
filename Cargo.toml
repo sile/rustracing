@@ -8,6 +8,7 @@ repository = "https://github.com/sile/rustracing"
 readme = "README.md"
 keywords = ["opentracing"]
 license = "MIT"
+edition = "2018"
 
 [badges]
 travis-ci = {repository = "sile/rustracing"}
