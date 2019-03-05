@@ -1,7 +1,6 @@
 use crate::sampler::Sampler;
-use crate::span::{SpanReceiver, SpanSender, StartSpanOptions};
+use crate::span::{SpanSender, StartSpanOptions};
 use std::borrow::Cow;
-use std::sync::mpsc;
 use std::sync::Arc;
 
 /// Tracer.
@@ -12,7 +11,8 @@ use std::sync::Arc;
 /// use rustracing::Tracer;
 /// use rustracing::sampler::AllSampler;
 ///
-/// let (tracer, span_rx) = Tracer::new(AllSampler);
+/// let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+/// let tracer = Tracer::new(AllSampler, span_tx);
 /// {
 ///    let _span = tracer.span("foo").start_with_state(());
 /// }
@@ -26,15 +26,11 @@ pub struct Tracer<S, T> {
 }
 impl<S: Sampler<T>, T> Tracer<S, T> {
     /// Makes a new `Tracer` instance.
-    pub fn new(sampler: S) -> (Self, SpanReceiver<T>) {
-        let (tx, rx) = mpsc::channel();
-        (
-            Tracer {
-                sampler: Arc::new(sampler),
-                span_tx: tx,
-            },
-            rx,
-        )
+    pub fn new(sampler: S, span_tx: SpanSender<T>) -> Self {
+        Tracer {
+            sampler: Arc::new(sampler),
+            span_tx,
+        }
     }
 
     /// Returns `StartSpanOptions` for starting a span which has the name `operation_name`.

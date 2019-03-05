@@ -10,7 +10,8 @@
 //! use std::time::Duration;
 //!
 //! // Creates a tracer
-//! let (tracer, span_rx) = Tracer::new(AllSampler);
+//! let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+//! let tracer = Tracer::new(AllSampler, span_tx);
 //! {
 //!     // Starts "parent" span
 //!     let parent_span = tracer.span("parent").start_with_state(());
@@ -76,7 +77,8 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let (tracer, span_rx) = Tracer::new(AllSampler);
+        let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+        let tracer = Tracer::new(AllSampler, span_tx);
         {
             let span = tracer.span("it_works").start_with_state(());
             let mut child = span.child("child", |options| options.start_with_state(()));
@@ -93,7 +95,8 @@ mod tests {
     #[test]
     fn example_code_works() {
         // Creates a tracer
-        let (tracer, span_rx) = Tracer::new(AllSampler);
+        let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+        let tracer = Tracer::new(AllSampler, span_tx);
         {
             // Starts "parent" span
             let parent_span = tracer.span("parent").start_with_state(());
@@ -119,5 +122,29 @@ mod tests {
             count += 1;
         }
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn nonblocking_on_full_queue() {
+        let (span_tx, span_rx) = crossbeam_channel::bounded(2);
+        let tracer = Tracer::new(AllSampler, span_tx);
+        {
+            let span = tracer.span("first").start_with_state(());
+            let mut child = span.child("second", |options| options.start_with_state(()));
+            child.set_tags(|| StdTag::peer_addr("127.0.0.1:80".parse().unwrap()));
+            let _ = tracer.span("third").start_with_state(());
+        } // All spans dropped but only two ones will be sent to `span_rx` due to capacity limit, others are lost
+
+        // If the code continues, there was no blocking operation while sending span to the channel
+        assert!(span_rx.is_full());
+        assert_eq!(span_rx.len(), 2);
+
+        let span = span_rx.try_recv().unwrap();
+        assert_eq!(span.operation_name(), "third");
+
+        let span = span_rx.try_recv().unwrap();
+        assert_eq!(span.operation_name(), "second");
+
+        assert!(span_rx.is_empty());
     }
 }
