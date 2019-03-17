@@ -6,7 +6,8 @@ description = "OpenTracing API for Rust"
 homepage = "https://github.com/sile/rustracing"
 repository = "https://github.com/sile/rustracing"
 readme = "README.md"
-keywords = ["opentracing"]
+keywords = ["opentracing", "distributed-tracing"]
+categories = ["web-programming"]
 license = "MIT"
 edition = "2018"
 
