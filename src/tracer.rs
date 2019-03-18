@@ -1,7 +1,6 @@
 use crate::sampler::Sampler;
 use crate::span::{SpanReceiver, SpanSender, StartSpanOptions};
 use std::borrow::Cow;
-use std::sync::mpsc;
 use std::sync::Arc;
 
 /// Tracer.
@@ -12,7 +11,8 @@ use std::sync::Arc;
 /// use rustracing::Tracer;
 /// use rustracing::sampler::AllSampler;
 ///
-/// let (tracer, span_rx) = Tracer::new(AllSampler);
+/// let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+/// let tracer = Tracer::with_sender(AllSampler, span_tx);
 /// {
 ///    let _span = tracer.span("foo").start_with_state(());
 /// }
@@ -25,16 +25,21 @@ pub struct Tracer<S, T> {
     span_tx: SpanSender<T>,
 }
 impl<S: Sampler<T>, T> Tracer<S, T> {
-    /// Makes a new `Tracer` instance.
+    /// This constructor is mainly for backward compatibility, it has the same interface
+    /// as in previous versions except the type of `SpanReceiver`.
+    /// It builds an unbounded channel which may cause memory issues if there is no reader,
+    /// prefer `with_sender()` alternative with a bounded one.
     pub fn new(sampler: S) -> (Self, SpanReceiver<T>) {
-        let (tx, rx) = mpsc::channel();
-        (
-            Tracer {
-                sampler: Arc::new(sampler),
-                span_tx: tx,
-            },
-            rx,
-        )
+        let (span_tx, span_rx) = crossbeam_channel::unbounded();
+        (Self::with_sender(sampler, span_tx), span_rx)
+    }
+
+    /// Makes a new `Tracer` instance.
+    pub fn with_sender(sampler: S, span_tx: SpanSender<T>) -> Self {
+        Tracer {
+            sampler: Arc::new(sampler),
+            span_tx,
+        }
     }
 
     /// Returns `StartSpanOptions` for starting a span which has the name `operation_name`.

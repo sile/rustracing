@@ -22,7 +22,8 @@ use std::thread;
 use std::time::Duration;
 
 // Creates a tracer
-let (tracer, span_rx) = Tracer::new(AllSampler);
+let (span_tx, span_rx) = crossbeam_channel::bounded(10);
+let tracer = Tracer::with_sender(AllSampler, span_tx);
 {
     // Starts "parent" span
     let parent_span = tracer.span("parent").start_with_state(());
