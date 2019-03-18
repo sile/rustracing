@@ -25,6 +25,8 @@ pub struct Tracer<S, T> {
     span_tx: SpanSender<T>,
 }
 impl<S: Sampler<T>, T> Tracer<S, T> {
+    /// Makes a new `Tracer` instance with an unbounded channel.
+    ///
     /// This constructor is mainly for backward compatibility, it has the same interface
     /// as in previous versions except the type of `SpanReceiver`.
     /// It builds an unbounded channel which may cause memory issues if there is no reader,
