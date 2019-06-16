@@ -48,7 +48,7 @@ while let Ok(span) = span_rx.try_recv() {
 }
 ```
 
-As an actual usage example of the crate and an implmentation of the [OpenTracing] API,
+As an actual usage example of the crate and an implementation of the [OpenTracing] API,
 it may be helpful to looking at [rustracing_jaeger] crate.
 
 References
