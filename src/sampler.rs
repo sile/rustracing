@@ -47,7 +47,7 @@ impl<T> Sampler<T> for BoxSampler<T> {
 }
 
 /// Boxed version of `Sampler`.
-pub type BoxSampler<T> = Box<Sampler<T> + Send + Sync + 'static>;
+pub type BoxSampler<T> = Box<dyn Sampler<T> + Send + Sync + 'static>;
 
 /// This samples a certain percentage of traces.
 #[derive(Debug, Clone)]
