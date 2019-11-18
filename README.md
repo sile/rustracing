@@ -4,7 +4,6 @@ rustracing
 [![Crates.io: rustracing](https://img.shields.io/crates/v/rustracing.svg)](https://crates.io/crates/rustracing)
 [![Documentation](https://docs.rs/rustracing/badge.svg)](https://docs.rs/rustracing)
 [![Actions Status](https://github.com/sile/rustracing/workflows/CI/badge.svg)](https://github.com/sile/rustracing/actions)
-[![Build Status](https://travis-ci.org/sile/rustracing.svg?branch=master)](https://travis-ci.org/sile/rustracing)
 [![Coverage Status](https://coveralls.io/repos/github/sile/rustracing/badge.svg?branch=master)](https://coveralls.io/github/sile/rustracing?branch=master)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
