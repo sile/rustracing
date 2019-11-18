@@ -21,6 +21,6 @@ default = [ "stacktrace" ]
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-crossbeam-channel = "0.4"
+crossbeam-channel = "0.3"
 rand = "0.7"
 trackable = "0.2"
