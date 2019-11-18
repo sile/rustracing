@@ -8,9 +8,6 @@ rustracing
 [![Coverage Status](https://coveralls.io/repos/github/sile/rustracing/badge.svg?branch=master)](https://coveralls.io/github/sile/rustracing?branch=master)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-https://github.com/sile/rustracing/workflows/CI/badge.svg
-
-
 [OpenTracing] API for Rust.
 
 [Documentation](https://docs.rs/rustracing)
