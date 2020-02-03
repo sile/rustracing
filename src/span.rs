@@ -70,6 +70,16 @@ impl<T> Span<T> {
         }
     }
 
+    /// Sets the start time of this span.
+    pub fn set_start_time<F>(&mut self, f: F)
+    where
+        F: FnOnce() -> SystemTime,
+    {
+        if let Some(inner) = self.0.as_mut() {
+            inner.start_time = f();
+        }
+    }
+
     /// Sets the finish time of this span.
     pub fn set_finish_time<F>(&mut self, f: F)
     where
