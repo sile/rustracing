@@ -2,7 +2,6 @@
 #[cfg(feature = "stacktrace")]
 use backtrace::Backtrace;
 use std::borrow::Cow;
-use std::error::Error;
 use std::time::SystemTime;
 
 /// Span log builder.
@@ -191,16 +190,6 @@ impl<'a> StdErrorLogFieldsBuilder<'a> {
         T: Into<Cow<'static, str>>,
     {
         self.0.field(LogField::new("message", message));
-        self
-    }
-
-    /// Adds `"error.kind"` and `"message"` fields.
-    ///
-    /// These values are `error.description()` and `error.to_string()` respectively.
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn object<T: Error>(&mut self, error: T) -> &mut Self {
-        self.kind(error.description().to_owned());
-        self.message(error.to_string());
         self
     }
 
