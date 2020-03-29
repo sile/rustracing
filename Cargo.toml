@@ -22,4 +22,5 @@ default = [ "stacktrace" ]
 backtrace = { version = "0.3", optional = true }
 crossbeam-channel = "0.4"
 rand = "0.7"
+tokio = { version = "0.2", optional = true, features = ["sync"] }
 trackable = "0.2"

@@ -222,7 +222,7 @@ where
     Sender: SpanSend<T>,
 {
     fn drop(&mut self) {
-        if let Some(inner) = self.0.take() {
+        if let Some(mut inner) = self.0.take() {
             let finished = FinishedSpan {
                 operation_name: inner.operation_name,
                 start_time: inner.start_time,
@@ -702,11 +702,18 @@ pub trait SpanSend<T>: Clone {
     /// Note that this method should be implemented in a non-blocking manner.
     /// And if the receiver is a temporarily full or has dropped,
     /// this method should just discard the span without any errors.
-    fn send(&self, span: FinishedSpan<T>);
+    fn send(&mut self, span: FinishedSpan<T>);
 }
 
 impl<T> SpanSend<T> for crossbeam_channel::Sender<FinishedSpan<T>> {
-    fn send(&self, span: FinishedSpan<T>) {
+    fn send(&mut self, span: FinishedSpan<T>) {
+        let _ = self.try_send(span);
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T> SpanSend<T> for tokio::sync::mpsc::Sender<FinishedSpan<T>> {
+    fn send(&mut self, span: FinishedSpan<T>) {
         let _ = self.try_send(span);
     }
 }
