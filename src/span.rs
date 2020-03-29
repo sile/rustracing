@@ -9,18 +9,24 @@ use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::time::SystemTime;
 
-/// Finished span receiver.
-pub type SpanReceiver<T> = crossbeam_channel::Receiver<FinishedSpan<T>>;
-/// Sender of finished spans to the destination channel.
-pub type SpanSender<T> = crossbeam_channel::Sender<FinishedSpan<T>>;
+/// The default receiver of finished spans.
+pub type DefaultSpanReceiver<T> = crossbeam_channel::Receiver<FinishedSpan<T>>;
+
+/// The default sender of finished spans.
+pub type DefaultSpanSender<T> = crossbeam_channel::Sender<FinishedSpan<T>>;
 
 /// Span.
 ///
 /// When this span is dropped, it will be converted to `FinishedSpan` and
 /// it will be sent to the associated `SpanReceiver`.
 #[derive(Debug)]
-pub struct Span<T>(Option<SpanInner<T>>);
-impl<T> Span<T> {
+pub struct Span<T, Sender = DefaultSpanSender<T>>(Option<SpanInner<T, Sender>>)
+where
+    Sender: SpanSend<T>;
+impl<T, Sender> Span<T, Sender>
+where
+    Sender: SpanSend<T>,
+{
     /// Makes an inactive span.
     ///
     /// This span is never traced.
@@ -38,7 +44,7 @@ impl<T> Span<T> {
     }
 
     /// Returns a handle of this span.
-    pub fn handle(&self) -> SpanHandle<T>
+    pub fn handle(&self) -> SpanHandle<T, Sender>
     where
         T: Clone,
     {
@@ -169,21 +175,21 @@ impl<T> Span<T> {
     }
 
     /// Starts a `ChildOf` span if this span is sampled.
-    pub fn child<N, F>(&self, operation_name: N, f: F) -> Span<T>
+    pub fn child<N, F>(&self, operation_name: N, f: F) -> Span<T, Sender>
     where
         N: Into<Cow<'static, str>>,
         T: Clone,
-        F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
+        F: FnOnce(StartSpanOptions<AllSampler, T, Sender>) -> Span<T, Sender>,
     {
         self.handle().child(operation_name, f)
     }
 
     /// Starts a `FollowsFrom` span if this span is sampled.
-    pub fn follower<N, F>(&self, operation_name: N, f: F) -> Span<T>
+    pub fn follower<N, F>(&self, operation_name: N, f: F) -> Span<T, Sender>
     where
         N: Into<Cow<'static, str>>,
         T: Clone,
-        F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
+        F: FnOnce(StartSpanOptions<AllSampler, T, Sender>) -> Span<T, Sender>,
     {
         self.handle().follower(operation_name, f)
     }
@@ -195,7 +201,7 @@ impl<T> Span<T> {
         tags: Vec<Tag>,
         state: T,
         baggage_items: Vec<BaggageItem>,
-        span_tx: SpanSender<T>,
+        span_tx: Sender,
     ) -> Self {
         let context = SpanContext::new(state, baggage_items);
         let inner = SpanInner {
@@ -211,7 +217,10 @@ impl<T> Span<T> {
         Span(Some(inner))
     }
 }
-impl<T> Drop for Span<T> {
+impl<T, Sender> Drop for Span<T, Sender>
+where
+    Sender: SpanSend<T>,
+{
     fn drop(&mut self) {
         if let Some(inner) = self.0.take() {
             let finished = FinishedSpan {
@@ -223,7 +232,7 @@ impl<T> Drop for Span<T> {
                 logs: inner.logs,
                 context: inner.context,
             };
-            let _ = inner.span_tx.try_send(finished);
+            inner.span_tx.send(finished);
         }
     }
 }
@@ -234,7 +243,7 @@ impl<T> MaybeAsRef<SpanContext<T>> for Span<T> {
 }
 
 #[derive(Debug)]
-struct SpanInner<T> {
+struct SpanInner<T, Sender> {
     operation_name: Cow<'static, str>,
     start_time: SystemTime,
     finish_time: Option<SystemTime>,
@@ -242,7 +251,7 @@ struct SpanInner<T> {
     tags: Vec<Tag>,
     logs: Vec<Log>,
     context: SpanContext<T>,
-    span_tx: SpanSender<T>,
+    span_tx: Sender,
 }
 
 /// Finished span.
@@ -485,18 +494,20 @@ impl<'a, T: 'a> CandidateSpan<'a, T> {
 
 /// Options for starting a span.
 #[derive(Debug)]
-pub struct StartSpanOptions<'a, S: 'a, T: 'a> {
+pub struct StartSpanOptions<'a, S: 'a, T: 'a, Sender: 'a = DefaultSpanSender<T>> {
     operation_name: Cow<'static, str>,
     start_time: Option<SystemTime>,
     tags: Vec<Tag>,
     references: Vec<SpanReference<T>>,
     baggage_items: Vec<BaggageItem>,
-    span_tx: &'a SpanSender<T>,
+    span_tx: &'a Sender,
     sampler: &'a S,
 }
-impl<'a, S: 'a, T: 'a> StartSpanOptions<'a, S, T>
+impl<'a, S, T, Sender> StartSpanOptions<'a, S, T, Sender>
 where
-    S: Sampler<T>,
+    S: 'a + Sampler<T>,
+    T: 'a,
+    Sender: 'a + SpanSend<T>,
 {
     /// Sets the start time of this span.
     pub fn start_time(mut self, time: SystemTime) -> Self {
@@ -541,7 +552,7 @@ where
     }
 
     /// Starts a new span.
-    pub fn start(mut self) -> Span<T>
+    pub fn start(mut self) -> Span<T, Sender>
     where
         T: for<'b> From<CandidateSpan<'b, T>>,
     {
@@ -562,7 +573,7 @@ where
     }
 
     /// Starts a new span with the explicit `state`.
-    pub fn start_with_state(mut self, state: T) -> Span<T> {
+    pub fn start_with_state(mut self, state: T) -> Span<T, Sender> {
         self.normalize();
         if !self.is_sampled() {
             return Span(None);
@@ -578,7 +589,7 @@ where
         )
     }
 
-    pub(crate) fn new<N>(operation_name: N, span_tx: &'a SpanSender<T>, sampler: &'a S) -> Self
+    pub(crate) fn new<N>(operation_name: N, span_tx: &'a Sender, sampler: &'a S) -> Self
     where
         N: Into<Cow<'static, str>>,
     {
@@ -627,8 +638,11 @@ where
 
 /// Immutable handle of `Span`.
 #[derive(Debug, Clone)]
-pub struct SpanHandle<T>(Option<(SpanContext<T>, SpanSender<T>)>);
-impl<T> SpanHandle<T> {
+pub struct SpanHandle<T, Sender = DefaultSpanSender<T>>(Option<(SpanContext<T>, Sender)>);
+impl<T, Sender> SpanHandle<T, Sender>
+where
+    Sender: SpanSend<T>,
+{
     /// Returns `true` if this span is sampled (i.e., being traced).
     pub fn is_sampled(&self) -> bool {
         self.0.is_some()
@@ -649,11 +663,11 @@ impl<T> SpanHandle<T> {
     }
 
     /// Starts a `ChildOf` span if this span is sampled.
-    pub fn child<N, F>(&self, operation_name: N, f: F) -> Span<T>
+    pub fn child<N, F>(&self, operation_name: N, f: F) -> Span<T, Sender>
     where
         N: Into<Cow<'static, str>>,
         T: Clone,
-        F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
+        F: FnOnce(StartSpanOptions<AllSampler, T, Sender>) -> Span<T, Sender>,
     {
         if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
             let options =
@@ -665,11 +679,11 @@ impl<T> SpanHandle<T> {
     }
 
     /// Starts a `FollowsFrom` span if this span is sampled.
-    pub fn follower<N, F>(&self, operation_name: N, f: F) -> Span<T>
+    pub fn follower<N, F>(&self, operation_name: N, f: F) -> Span<T, Sender>
     where
         N: Into<Cow<'static, str>>,
         T: Clone,
-        F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
+        F: FnOnce(StartSpanOptions<AllSampler, T, Sender>) -> Span<T, Sender>,
     {
         if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
             let options =
@@ -678,5 +692,21 @@ impl<T> SpanHandle<T> {
         } else {
             Span::inactive()
         }
+    }
+}
+
+/// This trait allows sending finished spans to a receiver.
+pub trait SpanSend<T>: Clone {
+    /// Sends a finished span to the associated receiver.
+    ///
+    /// Note that this method should be implemented in a non-blocking manner.
+    /// And if the receiver is a temporarily full or has dropped,
+    /// this method should just discard the span without any errors.
+    fn send(&self, span: FinishedSpan<T>);
+}
+
+impl<T> SpanSend<T> for crossbeam_channel::Sender<FinishedSpan<T>> {
+    fn send(&self, span: FinishedSpan<T>) {
+        let _ = self.try_send(span);
     }
 }
