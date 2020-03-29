@@ -717,3 +717,15 @@ impl<T> SpanSend<T> for tokio::sync::mpsc::Sender<FinishedSpan<T>> {
         let _ = self.try_send(span);
     }
 }
+
+#[cfg(all(test, feature = "tokio"))]
+mod tests {
+    use crate::sampler::AllSampler;
+    use crate::Tracer;
+
+    #[test]
+    fn tokio_channel() {
+        let (span_tx, _span_rx) = tokio::sync::mpsc::channel(10);
+        let _tracer = Tracer::<_, (), _>::with_sender(AllSampler, span_tx);
+    }
+}
