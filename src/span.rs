@@ -442,20 +442,12 @@ impl<T> SpanReference<T> {
 
     /// Returns `true` if this is a `ChildOf` reference.
     pub fn is_child_of(&self) -> bool {
-        if let SpanReference::ChildOf(_) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, SpanReference::ChildOf(_))
     }
 
     /// Returns `true` if this is a `FollowsFrom` reference.
     pub fn is_follows_from(&self) -> bool {
-        if let SpanReference::FollowsFrom(_) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, SpanReference::FollowsFrom(_))
     }
 }
 
