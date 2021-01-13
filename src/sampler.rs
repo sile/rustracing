@@ -69,7 +69,7 @@ impl ProbabilisticSampler {
 }
 impl<T> Sampler<T> for ProbabilisticSampler {
     fn is_sampled(&self, _span: &CandidateSpan<T>) -> bool {
-        rand::thread_rng().gen_range(0.0, 1.0) < self.sampling_rate
+        rand::thread_rng().gen_range(0.0..1.0) < self.sampling_rate
     }
 }
 
