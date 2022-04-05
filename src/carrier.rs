@@ -41,7 +41,7 @@ impl<S: BuildHasher> TextMap for HashMap<String, String, S> {
         self.insert(key.to_owned(), value.to_owned());
     }
     fn get(&self, key: &str) -> Option<&str> {
-        self.get(key).map(|v| v.as_ref())
+        HashMap::get(self, key).map(|v| v.as_ref())
     }
 }
 impl TextMap for BTreeMap<String, String> {
@@ -49,7 +49,7 @@ impl TextMap for BTreeMap<String, String> {
         self.insert(key.to_owned(), value.to_owned());
     }
     fn get(&self, key: &str) -> Option<&str> {
-        self.get(key).map(|v| v.as_ref())
+        BTreeMap::get(self, key).map(|v| v.as_ref())
     }
 }
 
