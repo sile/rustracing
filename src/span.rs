@@ -162,7 +162,7 @@ impl<T> Span<T> {
             if let Some(log) = builder.finish() {
                 inner.logs.push(log);
             }
-            if inner.tags.iter().find(|x| x.name() == "error").is_none() {
+            if !inner.tags.iter().any(|x| x.name() == "error") {
                 inner.tags.push(StdTag::error());
             }
         }

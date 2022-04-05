@@ -22,4 +22,4 @@ default = [ "stacktrace" ]
 backtrace = { version = "0.3", optional = true }
 crossbeam-channel = "0.5"
 rand = "0.8.1"
-trackable = "0.2"
+trackable = "1.2"
