@@ -8,11 +8,12 @@ use crate::Result;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::time::SystemTime;
+use tokio::sync::mpsc;
 
 /// Finished span receiver.
-pub type SpanReceiver<T> = crossbeam_channel::Receiver<FinishedSpan<T>>;
+pub type SpanReceiver<T> = mpsc::UnboundedReceiver<FinishedSpan<T>>;
 /// Sender of finished spans to the destination channel.
-pub type SpanSender<T> = crossbeam_channel::Sender<FinishedSpan<T>>;
+pub type SpanSender<T> = mpsc::UnboundedSender<FinishedSpan<T>>;
 
 /// Span.
 ///
@@ -223,7 +224,7 @@ impl<T> Drop for Span<T> {
                 logs: inner.logs,
                 context: inner.context,
             };
-            let _ = inner.span_tx.try_send(finished);
+            let _ = inner.span_tx.send(finished);
         }
     }
 }
