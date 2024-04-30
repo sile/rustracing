@@ -1,10 +1,10 @@
 [package]
-name = "rustracing"
-version = "0.6.0"
-authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+name = "cf-rustracing"
+version = "1.0.0"
+authors = ["Takeru Ohta <phjgt308@gmail.com>", "Cloudflare Inc."]
 description = "OpenTracing API for Rust"
-homepage = "https://github.com/sile/rustracing"
-repository = "https://github.com/sile/rustracing"
+homepage = "https://github.com/cloudflare/rustracing"
+repository = "https://github.com/cloudflare/rustracing"
 readme = "README.md"
 keywords = ["opentracing", "distributed-tracing"]
 categories = ["web-programming"]
