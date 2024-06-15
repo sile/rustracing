@@ -628,7 +628,7 @@ impl<T> SpanHandle<T> {
 
     /// Returns the context of this span.
     pub fn context(&self) -> Option<&SpanContext<T>> {
-        self.0.as_ref().map(|&(ref context, _)| context)
+        self.0.as_ref().map(|(context, _)| context)
     }
 
     /// Gets the baggage item that has the name `name`.
@@ -647,7 +647,7 @@ impl<T> SpanHandle<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
+        if let Some((context, span_tx)) = self.0.as_ref() {
             let options =
                 StartSpanOptions::new(operation_name, span_tx, &AllSampler).child_of(context);
             f(options)
@@ -663,7 +663,7 @@ impl<T> SpanHandle<T> {
         T: Clone,
         F: FnOnce(StartSpanOptions<AllSampler, T>) -> Span<T>,
     {
-        if let Some(&(ref context, ref span_tx)) = self.0.as_ref() {
+        if let Some((context, span_tx)) = self.0.as_ref() {
             let options =
                 StartSpanOptions::new(operation_name, span_tx, &AllSampler).follows_from(context);
             f(options)
