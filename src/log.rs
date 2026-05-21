@@ -24,12 +24,12 @@ impl LogBuilder {
     }
 
     /// Returns a specialized builder for the standard log fields.
-    pub fn std(&mut self) -> StdLogFieldsBuilder {
+    pub fn std(&mut self) -> StdLogFieldsBuilder<'_> {
         StdLogFieldsBuilder(self)
     }
 
     /// Returns a specialized builder for the standard error log fields.
-    pub fn error(&mut self) -> StdErrorLogFieldsBuilder {
+    pub fn error(&mut self) -> StdErrorLogFieldsBuilder<'_> {
         self.field(LogField::new("event", "error"));
         StdErrorLogFieldsBuilder(self)
     }

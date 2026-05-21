@@ -595,7 +595,7 @@ where
         self.baggage_items.dedup_by(|a, b| a.name() == b.name());
     }
 
-    fn span(&self) -> CandidateSpan<T> {
+    fn span(&self) -> CandidateSpan<'_, T> {
         CandidateSpan {
             references: &self.references,
             tags: &self.tags,
